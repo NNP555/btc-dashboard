@@ -1,0 +1,49 @@
+# .github/workflows/rebake.yml
+# 24/7 пересборка снимка BTC-дэшборда (Фаза B).
+# Кладётся в репозиторий по пути .github/workflows/rebake.yml
+#
+# ВАЖНО про лимит bitcoin-data (free): ~8 запросов/ЧАС и ~15/ДЕНЬ.
+# bake.js берёт ≤7 запросов к bitcoin-data за прогон. Значит запускаем 2×/день
+# (2 × 7 = 14 ≤ 15/день). Ядро on-chain обновляется дважды в день, когорты ротируются.
+# Быстрые источники (цена/Deribit) тоже освежаются в каждом прогоне.
+#
+# Автостоп: Actions отключает cron после 60 дней БЕЗ активности репо. Каждый прогон
+# коммитит data.json (меняется поле asof) → это и есть активность → само-keepalive.
+
+name: rebake
+
+on:
+  schedule:
+    - cron: '0 9,21 * * *'      # 09:00 и 21:00 UTC (джиттер Actions до ~30 мин — ок)
+  workflow_dispatch: {}          # кнопка ручного запуска в Actions
+
+permissions:
+  contents: write                # чтобы коммитить data.json
+
+concurrency:
+  group: rebake
+  cancel-in-progress: false
+
+jobs:
+  bake:
+    runs-on: ubuntu-latest       # US-раннер: Binance гео-блок → bake.js его не использует
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Пересобрать data.json
+        # Ключи (когда появятся, Фаза C): прокидываются из Secrets, напр.:
+        # env:
+        #   FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: node bake.js
+
+      - name: Коммит снимка
+        run: |
+          git config user.name  "rebake-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data.json
+          git commit -m "rebake $(date -u +%FT%TZ)" || echo "нет изменений"
+          git push
