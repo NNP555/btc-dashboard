@@ -107,12 +107,16 @@ const BD = {
   'lth-mvrv': 'lthMvrv', 'sth-mvrv': 'sthMvrv', 'nupl-lth': 'nuplLth', 'nupl-sth': 'nuplSth',
 };
 const BD_CORE = ['mvrv-zscore', 'nupl', 'sopr', 'puell-multiple', 'rhodl-ratio', 'hodl-bank'];
-const BD_ROTATE = ['realized-price', 'sth-realized-price', 'average-dormancy', 'lth-sopr', 'sth-sopr', 'reserve-risk', 'lth-mvrv', 'sth-mvrv', 'nupl-lth', 'nupl-sth'];
+const BD_ROTATE = ['lth-sopr', 'nupl-lth', 'sth-sopr', 'nupl-sth', 'lth-mvrv', 'sth-mvrv', 'sth-realized-price', 'average-dormancy', 'realized-price', 'reserve-risk'];
 
 function bdVal(obj) {
   const date = obj.d || obj.theDate || TODAY;
-  const ent = Object.entries(obj).find(([k, v]) => typeof v === 'number' && k !== 'unixTs');
-  return ent ? { value: ent[1], date } : null;
+  for (const [k, v] of Object.entries(obj)) {                 // bitcoin-data отдаёт значения то числом, то строкой
+    if (k === 'unixTs' || k === 'd' || k === 'theDate') continue;
+    const n = typeof v === 'number' ? v : (typeof v === 'string' && v.trim() !== '' && isFinite(+v) ? +v : null);
+    if (n != null) return { value: n, date };
+  }
+  return null;
 }
 async function bitcoinData(slugs) {
   for (const slug of slugs) {
@@ -127,7 +131,7 @@ async function bitcoinData(slugs) {
 }
 // выбрать ротируемые по «стальности» (самые старые prev-даты вперёд)
 function pickRotating(n) {
-  const age = slug => { const p = prevM[BD[slug]]; return p && p.d ? (Date.now() - new Date(p.d)) : Infinity; };
+  const age = slug => { const p = prevM[BD[slug]]; return p && p.d ? (Date.now() - new Date(p.d)) : 9e15; };
   return BD_ROTATE.slice().sort((a, b) => age(b) - age(a)).slice(0, n);
 }
 
