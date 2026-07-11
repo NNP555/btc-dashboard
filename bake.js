@@ -27,6 +27,7 @@ const OUT = path.join(__dirname, 'data.json');
 const TODAY = new Date().toISOString().slice(0, 10);
 const HIST_CAP = 400;                 // сколько точек истории держать на метрику
 const ANOMALY = 0.5;                  // >50% скачок к прошлому значению = аномалия
+const VOLATILE = new Set(['price', 'etfFlow', 'funding', 'cbPrice', 'deribitIndex', 'oiUsd', 'dvol']); // рыночные метрики законно скачут — отсечку аномалий к ним не применяем
 const BD_BUDGET = 7;                  // макс. запросов к bitcoin-data за прогон (лимит 8/час)
 
 // ---------- утилиты ----------
@@ -63,7 +64,7 @@ function put(key, value, date, src) {
   if (value == null || !isFinite(value)) { log('· skip', key, '(нет значения)'); if (prevM[key]) snap.metrics[key] = prevM[key]; return; }
   const p = prevM[key];
   // A5: аномальный скачок → оставить старое, пометить
-  if (p && p.v != null && Math.abs(p.v) > 1e-12 && Math.abs(value - p.v) / Math.abs(p.v) > ANOMALY) {
+  if (!VOLATILE.has(key) && p && p.v != null && Math.abs(p.v) > 1e-12 && Math.abs(value - p.v) / Math.abs(p.v) > ANOMALY) {
     snap.metrics[key] = { ...p, anom: { rejected: value, at: TODAY } };
     snap.flags[key] = 'anomaly'; log('! anomaly', key, p.v, '→', value, '(отклонено)'); return;
   }
@@ -159,13 +160,30 @@ async function others() {
   catch (e) { log('DefiLlama ✕', e.message); }
 }
 
-// ---------- TODO (Фаза C): требуют парсера/ключа — пока пропускаем, значение остаётся из prev ----------
-// etfFlow  — Farside HTML-таблица (парсер) / SoSoValue API. Нормировать на AUM = etf-btc-total × price.
-// m2       — FRED (US+EZ+JP+UK series) + Frankfurter (FX→USD). Ключ FRED в Secrets.
-// us10y    — FRED DGS10 (или Stooq CSV).  dxy — Stooq/Frankfurter-корзина.
-// options 25d-skew — Deribit get_book_summary_by_currency → mark_iv по цепочке → дельта по Блэку-76.
+// ---------- ETF net flow (Farside, HTML-таблица, БЕЗ библиотек) — 30-дн. сумма колонки Total, $m→$B ----------
+async function etfFlow() {
+  try {
+    const html = await jget('https://farside.co.uk/btc/', { timeout: 20000 });
+    if (typeof html !== 'string') { log('ETF Farside ✕ не HTML'); return; }
+    const dateRe = /^\s*\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/;
+    const pf = s => { s = (s || '').replace(/,/g, '').trim(); if (s === '' || s === '-') return null; const neg = /^\(.*\)$/.test(s); s = s.replace(/[()]/g, ''); const n = parseFloat(s); return isFinite(n) ? (neg ? -n : n) : null; };
+    const daily = [];
+    for (const row of html.split(/<tr[^>]*>/i)) {
+      const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim());
+      if (cells.length < 3 || !dateRe.test(cells[0])) continue;   // только строки-даты
+      const tot = pf(cells[cells.length - 1]);                     // последняя ячейка = Total
+      if (tot != null) daily.push(tot);
+    }
+    if (daily.length) { const sum30 = daily.slice(-30).reduce((a, b) => a + b, 0); put('etfFlow', sum30 / 1000, TODAY, 'Farside 30д'); log('ETF Farside ✓', daily.length, 'дн, 30д =', (sum30 / 1000).toFixed(2), '$B'); }
+    else log('ETF Farside ✕ строки не распознаны');
+  } catch (e) { log('ETF Farside ✕', e.message); }
+}
+
+// ---------- TODO (Фаза C, требуют ключа/расчёта) ----------
+// m2 — FRED (US+EZ+JP+UK) + Frankfurter (FX→USD), ключ FRED в Secrets.
+// us10y — FRED DGS10 / Stooq CSV.  dxy — Stooq CSV.  25d-skew — Deribit book_summary → Блэк-76.
 function carryTodo() {
-  for (const k of ['etfFlow', 'm2', 'us10y', 'dxy']) if (prevM[k]) snap.metrics[k] = prevM[k];
+  for (const k of ['etfFlow', 'm2', 'us10y', 'dxy']) if (!snap.metrics[k] && prevM[k]) snap.metrics[k] = prevM[k];
 }
 
 // ---------- main ----------
@@ -179,6 +197,7 @@ function carryTodo() {
   for (const slug of BD_ROTATE) { const k = BD[slug]; if (!snap.metrics[k] && prevM[k]) snap.metrics[k] = prevM[k]; }
   await deribit();
   await others();
+  await etfFlow();
   carryTodo();
 
   // Reserve Risk (свежий) = цена / HODL Bank — если оба есть
