@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BTC Bottom & Reversal Dashboard</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#0f1420; --panel:#161d2c; --panel2:#1c2536; --line:#2a3448;
+  --tx:#e8edf7; --mut:#96a3bd; --mut2:#6f7d99;
+  --grn:#16c784; --grn2:#0e9c67; --yel:#f3b23e; --org:#f08b3a; --red:#ea3943; --blu:#3b82f6;
+  --card-r:14px; --sh:0 2px 14px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0d1119,#0f1420 240px);color:var(--tx);
+  font-family:"Segoe UI",Roboto,Helvetica,Arial,system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#6ea8fe;text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1220px;margin:0 auto;padding:20px 18px 60px}
+h1{font-size:22px;margin:0 0 2px;letter-spacing:.2px}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:1.2px;color:var(--mut);margin:26px 0 12px;font-weight:600}
+.sub{color:var(--mut);font-size:13px}
+.topbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--card-r);padding:16px 18px;box-shadow:var(--sh)}
+.price{font-size:26px;font-weight:700}
+.price small{font-size:13px;color:var(--mut);font-weight:400}
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.4px}
+.btn{background:var(--blu);color:#fff;border:0;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.08)} .btn.sec{background:var(--panel2);border:1px solid var(--line);color:var(--tx)}
+.btn:disabled{opacity:.55;cursor:default}
+.row{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.g2,.g3,.g4{grid-template-columns:1fr}.price{font-size:22px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--card-r);padding:18px;box-shadow:var(--sh)}
+.gaugewrap{display:flex;flex-direction:column;align-items:center;text-align:center}
+.gaugewrap .verdict{font-size:17px;font-weight:700;margin-top:6px}
+.gaugewrap .desc{color:var(--mut);font-size:12.5px;margin-top:5px;max-width:430px}
+.big{font-size:46px;font-weight:800;line-height:1}
+.catcards{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.catcards{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.catcards{grid-template-columns:1fr}}
+.catcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+.catcard .n{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+.catcard .s{font-size:26px;font-weight:800;margin-top:2px}
+.catcard .w{font-size:11px;color:var(--mut2);margin-top:2px}
+.bar{height:7px;border-radius:6px;background:#0c1220;overflow:hidden;margin-top:9px}
+.bar>i{display:block;height:100%;border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;cursor:default}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.cathdr td{background:var(--panel2);font-weight:700;text-transform:uppercase;letter-spacing:.6px;font-size:11.5px;color:var(--mut)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.st{font-weight:700;font-size:12px}
+input.val,input.wt{width:92px;background:#0c1220;border:1px solid var(--line);color:var(--tx);border-radius:7px;
+  padding:5px 7px;font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums}
+input.wt{width:58px}
+.scorechip{display:inline-block;min-width:34px;text-align:center;padding:3px 7px;border-radius:7px;font-weight:800;font-size:12.5px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;color:var(--mut);font-size:12px;margin-top:10px}
+.legend span{display:flex;align-items:center;gap:6px}
+details{background:var(--panel);border:1px solid var(--line);border-radius:var(--card-r);padding:4px 18px;margin-top:14px}
+details>summary{cursor:pointer;padding:12px 0;font-weight:600;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸ ";color:var(--mut)}
+details[open]>summary::before{content:"▾ "}
+.mth{font-size:13px;color:#cfd8ea} .mth b{color:var(--tx)}
+.mth li{margin:5px 0}
+.srcstat{font-size:12px;color:var(--mut);margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 14px}
+.srcstat b{color:var(--tx)}
+.tag{font-size:10.5px;padding:1px 6px;border-radius:5px;border:1px solid var(--line);color:var(--mut2)}
+.tag.live{color:var(--grn);border-color:var(--grn2)}
+.foot{color:var(--mut2);font-size:11.5px;margin-top:26px;line-height:1.6}
+.hint{color:var(--mut);font-size:12px;margin:4px 0 0}
+.flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.mname{cursor:help;border-bottom:1px dotted var(--mut)}
+.mname .ic{font-size:10px;color:var(--mut2);margin-left:1px}
+#tip{position:fixed;display:none;max-width:360px;background:#0f1426;border:1px solid #2b3355;color:#e2e8f6;padding:10px 13px;border-radius:9px;font-size:12.5px;line-height:1.5;box-shadow:0 10px 30px rgba(0,0,0,.55);z-index:9999;pointer-events:none}
+#tip b{color:#fff}
+</style>
+</head>
+<body>
+<div id="tip"></div>
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <h1>₿ BTC Bottom &amp; Reversal Dashboard</h1>
+      <div class="sub">Агрегированная оценка дна и вершины крипторынка + импульс разворота · только Bitcoin</div>
+    </div>
+    <div style="text-align:right">
+      <div class="price" id="priceBox">$61,024 <small>BTC</small></div>
+      <div class="sub" id="asof">загрузка данных…</div>
+    </div>
+    <div class="flex" style="flex-direction:column;align-items:flex-end;gap:4px">
+      <span class="sub" id="liveNote" style="font-size:12px">⟳ обновляется автоматически при открытии</span>
+      <span style="font-size:11px"><span id="pctNote" class="sub"></span> <button class="btn sec" style="font-size:10px;padding:3px 8px" onclick="pctHelp()">Досчитать перцентили</button></span>
+    </div>
+  </div>
+
+  <!-- ГЛАВНЫЕ ИНДИКАТОРЫ -->
+  <div class="row g3" style="margin-top:16px">
+    <div class="card gaugewrap">
+      <div style="font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;font-weight:600">Дно · недооценка / капитуляция</div>
+      <div id="gaugeBottom"></div>
+      <div class="verdict" id="bottomVerdict">—</div>
+      <div class="desc" id="bottomDesc"></div>
+    </div>
+    <div class="card gaugewrap">
+      <div style="font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;font-weight:600">Импульс / тренд · вверх (100) ↔ вниз (0)</div>
+      <div id="gaugeRev"></div>
+      <div class="verdict" id="revVerdict">—</div>
+      <div class="desc" id="revDesc"></div>
+    </div>
+    <div class="card gaugewrap">
+      <div style="font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;font-weight:600">Вершина · эйфория / распределение</div>
+      <div id="gaugeTop"></div>
+      <div class="verdict" id="topVerdict">—</div>
+      <div class="desc" id="topDesc"></div>
+    </div>
+  </div>
+
+  <!-- ВЕРДИКТ -->
+  <div class="card" id="summaryCard" style="margin-top:16px;border-left:5px solid var(--grn)">
+    <div style="font-weight:700;font-size:16px;margin-bottom:4px" id="summaryTitle">Итог</div>
+    <div id="summaryText" class="sub" style="font-size:13.5px;color:#cfd8ea"></div>
+  </div>
+
+  <!-- КАТЕГОРИИ -->
+  <h2>Баллы по категориям</h2>
+  <div class="catcards" id="catCards"></div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--grn)"></i>80–100 · сильный сигнал дна</span>
+    <span><i class="dot" style="background:var(--yel)"></i>60–80 · умеренный</span>
+    <span><i class="dot" style="background:var(--org)"></i>40–60 · нейтрально</span>
+    <span><i class="dot" style="background:var(--red)"></i>0–40 · дорого / риск вершины</span>
+  </div>
+
+  <!-- ТАБЛИЦА -->
+  <h2>Детальные метрики · значения, пороги, баллы, веса</h2>
+  <div class="card" style="padding:6px 4px">
+    <div style="overflow-x:auto">
+    <table id="metricsTable">
+      <thead>
+        <tr>
+          <th>Индикатор</th>
+          <th class="num">Значение</th>
+          <th>Сигнал: дно ↔ вершина</th>
+          <th>Статус</th>
+          <th class="num">Балл</th>
+          <th class="num">Вес&nbsp;%</th>
+          <th>Источник</th>
+        </tr>
+      </thead>
+      <tbody id="metricsBody"></tbody>
+    </table>
+    </div>
+    <div class="hint" style="padding:8px 12px">💡 Значения и веса можно менять прямо в таблице — баллы пересчитываются мгновенно. Пустые метрики исключаются, веса перенормируются. Балл метрики = гибрид <b>max(абсолютный порог, перцентиль за 4 года)</b> для дна (и зеркально для вершины) — ловит и свежие экстремумы, и затухание амплитуды из цикла в цикл. MVRV-Z и NUPL несут один сигнал себестоимости (NUPL = 1 − 1/MVRV), поэтому MVRV-ratio оставлен контекстом с весом 0, а сам фактор считают MVRV-Z и NUPL напрямую.</div>
+  </div>
+
+  <div class="srcstat" id="srcStat"></div>
+
+  <!-- ЗАГЛУШКИ / РОАДМАП -->
+  <details>
+    <summary>🧩 Не подключено — заглушки и роадмап (что ещё усилит сигнал)</summary>
+    <div class="mth">
+      <p>Ядро моделей закрыто бесплатными источниками. Ниже — метрики, которые <b>ещё не участвуют в баллах</b>: часть бесплатна, но требует доработки источника; часть платная и подключится в облачной версии. Веса указаны как «зарезервированные» — на сколько метрика потянет балл, когда включится.</p>
+
+      <p style="margin:10px 0 4px"><b style="color:var(--grn)">● Бесплатно — в работе</b> <span class="sub" style="font-size:11px">(источник есть, нужен точный слаг/расчёт)</span></p>
+      <ul style="font-size:13px;line-height:1.5">
+        <li><b>NRPL / SOPR по когортам (LTH &amp; STH)</b> — реализованная прибыль/убыток и трата монет отдельно по долго- и краткосрочным держателям. Всплеск трат старых монет = распределение на вершине; капитуляция молодых = дно. <i>Источник: bitcoin-data.com — нужен точный слаг когорты; частично уже закрыто метрикой Dormancy.</i> Резерв веса: дно 3–4%, вершина 5%.</li>
+        <li><b>Options 25-delta skew (Deribit)</b> — перекос вменённой волатильности пут/колл. Дорогие путы (страх) = зона дна; дорогие коллы (жадность) = зона вершины. <i>Источник: Deribit — парсинг цепочки опционов + интерполяция к 25-дельте.</i> Резерв веса: 2–3% (деривативы).</li>
+      </ul>
+
+      <p style="margin:12px 0 4px"><b style="color:var(--org)">● Платно — в облачной версии</b> <span class="sub" style="font-size:11px">(Glassnode / CryptoQuant)</span></p>
+      <ul style="font-size:13px;line-height:1.5">
+        <li><b>Entity-adjusted exchange netflows</b> — чистые потоки на биржи, очищенные от внутренних переводов самих бирж (самый чистый сигнал давления). Приток = продажи (→ вершина), отток = аккумуляция (→ дно). Резерв веса: 6–8%.</li>
+        <li><b>Whale netflows</b> — потоки кошельков-китов (&gt;1000 BTC) на биржи и обратно. Ранний сигнал крупных игроков. Резерв веса: 4%.</li>
+        <li><b>URPD (UTXO Realized Price Distribution)</b> — плотность себестоимости монет по ценовым уровням: где сосредоточен объём «застрявших» покупок → зоны поддержки/сопротивления. Контекст, вес 0.</li>
+        <li><b>Полные HODL Waves / когортное RHODL</b> — доля предложения по возрасту монет. Вызревание молодых→старых = аккумуляция/дно; обратное = распределение/вершина. Резерв веса: 3%.</li>
+        <li><b>LTH / STH Supply &amp; Realized Price, STH-MVRV / LTH-MVRV</b> — предложение и себестоимость долго/краткосрочных держателей по отдельности (сейчас есть только агрегатные MVRV-Z, NUPL, STH-цена). Резерв веса: 4–6%.</li>
+      </ul>
+      <p class="hint">Пока эти метрики выключены, итоговый балл считается по доступным (веса перенормируются), поэтому цифры остаются корректными — просто с чуть меньшим числом подтверждений. В облачной версии платные источники подключаются автоматически и начинают участвовать в баллах.</p>
+    </div>
+  </details>
+
+  <!-- МЕТОДОЛОГИЯ -->
+  <details>
+    <summary>📖 Методология: как считается балл и что значит каждая метрика</summary>
+    <div class="mth" id="methodology"></div>
+  </details>
+
+  <details>
+    <summary>🔌 Источники данных и живое обновление</summary>
+    <div class="mth">
+      <p>Файл работает <b>полностью офлайн</b> на «запечённом» снимке (его дата — в шапке; снимок ежедневно пересобирается фоновой задачей). При открытии страница <b>автоматически</b> пытается подтянуть свежие данные из бесплатных публичных API прямо из браузера:</p>
+      <ul>
+        <li><b>CoinGecko</b> (<a href="https://www.coingecko.com/en/api" target="_blank">api.coingecko.com</a>) — цена, ATH, просадка, доминация, 365‑дн. история цен → скользящие средние, RSI, Bull Market Support Band. CORS открыт, обычно работает из браузера.</li>
+        <li><b>Alternative.me</b> (<a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank">api.alternative.me/fng</a>) — индекс страха и жадности.</li>
+        <li><b>bitcoin-data.com / BGeometrics</b> (<a href="https://bitcoin-data.com/" target="_blank">bitcoin-data.com</a>) — MVRV Z‑Score, SOPR, NUPL, Puell Multiple, Reserve Risk, реализованная цена, RHODL. Бесплатный API. <i>CORS может блокироваться при открытии файла как file://</i> — тогда остаётся значение из снимка (его видно по метке «снимок»).</li>
+        <li><b>Binance Futures</b> (fapi.binance.com) — ставка финансирования. Может быть недоступна по гео/CORS.</li>
+      </ul>
+      <p class="hint">Если живое обновление где-то не сработало (CORS/гео-блок), просто впиши актуальное число вручную в таблицу — источник каждой метрики указан в её строке. Платный Glassnode нужен только для экзотических метрик; всё ядро закрыто бесплатными источниками.</p>
+      <p class="hint">⚠️ Это аналитический инструмент, а не финансовый совет. Дно и развороты не определяются одной метрикой — смысл дэшборда в совпадении многих независимых сигналов.</p>
+    </div>
+  </details>
+
+  <div class="foot" id="footNote"></div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   1. СНИМОК ДАННЫХ (baked snapshot) — на 2026-07-02
+   Значения собраны из FMP, bitcoin-data.com, alternative.me.
+   Каждое поле: {v: значение, src: источник, date, live: ключ живого API}
+   ============================================================ */
+const SNAP = {
+  price:        {v:64084.96, src:'FMP',            date:'2026-07-11'},
+  ath:          {v:126198.07,src:'FMP (1y high)',  date:'2026-07-02'},
+  yearLow:      {v:58075.92, src:'FMP',            date:'2026-07-02'},
+  sma50:        {v:68500.12, src:'FMP',            date:'2026-07-02'},
+  sma200:       {v:75354.62, src:'FMP',            date:'2026-07-02'},
+  sma20w:       {v:70518.16, src:'FMP (140d SMA)', date:'2026-07-02'},
+  sma111:       {v:70779.27, src:'FMP',            date:'2026-07-06'},
+  sma350:       {v:88845.36, src:'FMP',            date:'2026-07-06'},
+  sma730:       {v:87413.63, src:'FMP (2Y MA)',    date:'2026-07-06'},
+  sthRealized:  {v:74080.18, src:'bitcoin-data.com', date:'2026-07-11'},
+  rsi:          {v:42.27,    src:'FMP',            date:'2026-07-02'},
+  rsiPrev:      {v:30.22,    src:'FMP',            date:'2026-06-30'},
+  mom30:        {v:-8.0,     src:'снимок',         date:'2026-07-02'},
+  realized:     {v:52747.82, src:'bitcoin-data.com', date:'2026-06-29'},
+  mvrvZ:        {v:0.3199,   src:'bitcoin-data.com', date:'2026-07-11'},
+  hodlBank:     {v:124603338.23, src:'bitcoin-data.com', date:'2026-07-11'},
+  dormancy:     {v:6.3782,    src:'bitcoin-data.com', date:'2026-07-05'},
+  nupl:         {v:0.168,    src:'bitcoin-data.com', date:'2026-07-11'},
+  sopr:         {v:0.9979,   src:'bitcoin-data.com', date:'2026-07-11'},
+  puell:        {v:0.7015,   src:'bitcoin-data.com', date:'2026-06-26'},
+  rhodl:        {v:941.1411,  src:'bitcoin-data.com', date:'2026-07-11'},
+  fng:          {v:19,       src:'alternative.me',   date:'2026-07-02'},
+  us10y:        {v:4.48,     src:'FMP',            date:'2026-07-01'},
+  dxy:          {v:null,     src:'live/ручной',    date:''},
+  funding:      {v:0.00004,  src:'Deribit',        date:'2026-07-06'},
+  dvol:         {v:40.17,    src:'Deribit (DVOL)', date:'2026-07-06'},
+  oiUsd:        {v:824483990,src:'Deribit перп',   date:'2026-07-06'},
+  stablecoin:   {v:304000000000, src:'DefiLlama ≈', date:'2026-07-06'},
+  m2:           {v:115000000000000, src:'≈ ручной (Global)', date:'2026-07-06'},
+  etfFlow:      {v:null,     src:'ручной (Farside)', date:''},
+  cbPrice:      {v:null,     src:'Coinbase live', date:''},
+  deribitIndex: {v:null,     src:'Deribit live',  date:''}
+};
+// Рабочая копия значений (изменяется пользователем и живым обновлением)
+let RAW = {}; for(const k in SNAP) RAW[k] = {...SNAP[k]};
+
+const NEXT_HALVING = new Date('2028-04-20T00:00:00Z');
+
+/* ============================================================
+   2. ХЕЛПЕРЫ СКОРИНГА
+   interp(points,x): кусочно-линейная интерполяция.
+   points = [[x1,score1],[x2,score2],...] по возрастанию x.
+   ============================================================ */
+function interp(points, x){
+  if(x==null||isNaN(x)) return null;
+  if(x<=points[0][0]) return points[0][1];
+  const last=points[points.length-1];
+  if(x>=last[0]) return last[1];
+  for(let i=0;i<points.length-1;i++){
+    const [x0,y0]=points[i],[x1,y1]=points[i+1];
+    if(x>=x0&&x<=x1){ return y0+(x-x0)/(x1-x0)*(y1-y0); }
+  }
+  return last[1];
+}
+function monthsToHalving(){ return (NEXT_HALVING - new Date('2026-07-02T00:00:00Z'))/(1000*60*60*24*30.4375); }
+
+/* ============================================================
+   3. ОПРЕДЕЛЕНИЕ МЕТРИК (движок «дна»)
+   Каждая: id, name, cat, weight, unit, fmt, band(текст зоны дна),
+   get()=>сырое значение, pts=точки интерполяции, why(текст).
+   Балл 0..100: 100 = максимальный сигнал ДНА, 0 = вершина/эйфория.
+   ============================================================ */
+const fmtUsd = v => v==null?'—':'$'+Math.round(v).toLocaleString('en-US');
+const fmtNum = (v,d=2) => v==null?'—':(+v).toFixed(d);
+const fmtPct = (v,d=1) => v==null?'—':(+v).toFixed(d)+'%';
+
+const CATS = {
+  val:  {name:'On-chain оценка',      color:'#7c5cff'},
+  pl:   {name:'On-chain прибыль/убыток',color:'#3b82f6'},
+  tech: {name:'Техника',              color:'#16c784'},
+  sent: {name:'Сентимент',            color:'#f3b23e'},
+  cyc:  {name:'Цикл',                 color:'#e06ec2'},
+  der:  {name:'Деривативы',           color:'#f08b3a'},
+  macro:{name:'Макро',                color:'#8aa0c6'}
+};
+
+// Де-корреляция: MVRV / MVRV-Z / NUPL — одна realized-база (NUPL = 1 − 1/MVRV).
+// Считаются как ОДИН фактор: внутри кластера усредняются, в композит идут одним весом.
+const CLUSTER = {
+  cb:{ ids:['mvrvZ','nupl'], wB:18, wT:16, name:'Cost-basis (realized value)' }
+};
+// Веса модели ВЕРШИНЫ (topness = 100 − балл_дна). Участники кластера = 0 (вес идёт через CLUSTER).
+const TOPW = { mvrvZ:8, mvrvRatio:0, nupl:8, reserveRisk:8, sopr:4, puell:5, sthPrice:6,
+  mayer:8, rsi:6, drawdown:3, bmsb:4, p50:3, fng:7, rhodl:10, halving:2, piCycle:10, twoYMA:7, funding:10, dvol:2, us10y:0, dxy:0, etfFlow:10 };
+
+const METRICS = [
+  // --- ON-CHAIN ОЦЕНКА ---
+  {id:'mvrvZ',cat:'val',name:'MVRV Z-Score',w:9,unit:'',
+    get:()=>RAW.mvrvZ.v, fmt:v=>fmtNum(v,2), band:'дно < 0.5 · вершина > 4 (истор. 2017≈8)',
+    pts:[[-0.3,100],[0,90],[0.5,77],[1,64],[2,44],[3,25],[4,12],[5,6],[8,0]],
+    why:'Отклонение рыночной цены от «реализованной» в стандартных отклонениях. Историческое дно цикла — зелёная зона ниже 0.1; значения ниже 1 = глубокая недооценка.'},
+  {id:'mvrvRatio',cat:'val',name:'MVRV (цена / реализ.) · контекст',w:0,unit:'',
+    get:()=> (RAW.price.v&&RAW.realized.v)? RAW.price.v/RAW.realized.v : null, fmt:v=>fmtNum(v,2), band:'дно < 1.0 · вершина > 3',
+    pts:[[0.8,100],[1.0,85],[1.2,72],[1.5,58],[2,42],[2.7,22],[3.5,6],[5,0]],
+    why:'Отношение цены к средней цене приобретения всех монет. Ниже 1 — держатели в среднем в убытке (классическое дно); выше 3.7 — историческая вершина.'},
+  {id:'reserveRisk',cat:'val',name:'Reserve Risk',w:7,unit:'',srcTxt:'= цена / HODL Bank (шкала bitcoin-data)',
+    get:()=> (RAW.price.v&&RAW.hodlBank.v)? RAW.price.v/RAW.hodlBank.v : null, fmt:v=>v==null?'—':(+v).toFixed(5), band:'дно ≈0.0004 · вершина ≈0.0015 (шкала bitcoin-data, ≈¼ от Glassnode)',
+    pts:[[0.0004,100],[0.0005,90],[0.0007,72],[0.0009,54],[0.0011,36],[0.0013,18],[0.00146,8],[0.0018,0]],
+    why:'Reserve Risk = цена / HODL Bank — каноничная формула (Hans Hauge): цена относительно «уверенности» долгосрочных держателей. Низкое = сильные руки копят (дно). Считаем из свежего HODL Bank и цены, т.к. готовый reserve-risk у bitcoin-data лагает (их 0.000583 на 01.06 согласуется с нашим свежим ~0.00051 — та же формула, отличие только в дате). ВАЖНО про шкалу: у bitcoin-data Reserve Risk примерно в 3–4 раза НИЖЕ, чем у Glassnode/CoinGlass, — не сравнивай абсолютное число между сайтами, смотри зону. Пороги переякорены на ИЗМЕРЕННУЮ историю bitcoin-data: дно-2022 ≈0.0004, пик дек-2024 ≈0.00146 (прежний верхний порог 0.03 был завышен в ~20 раз — RR никогда не срабатывал как сигнал вершины). Плюс метрика добавлена в месячный перцентильный пересчёт для самокалибровки.'},
+
+  {id:'sthPrice',cat:'val',name:'Цена / STH realized price',w:6,unit:'',
+    get:()=> (RAW.price.v&&RAW.sthRealized.v)? RAW.price.v/RAW.sthRealized.v : null, fmt:v=>fmtNum(v,3), band:'дно < 0.85 · пивот бык/медведь = 1.0 · вершина > 1.2',
+    pts:[[0.6,100],[0.75,88],[0.9,68],[1.0,50],[1.2,28],[1.5,10]],
+    why:'Себестоимость краткосрочных держателей (монеты моложе 155 дней). Цена ниже STH realized price = давление/медвежий режим; возврат и удержание выше — ключевое подтверждение разворота (пивот бык/медведь).'},
+
+  // --- ON-CHAIN ПРИБЫЛЬ/УБЫТОК ---
+  {id:'nupl',cat:'pl',name:'NUPL',w:9,unit:'',
+    get:()=>RAW.nupl.v, fmt:v=>fmtNum(v,3), band:'дно < 0.25 · вершина > 0.7 (эйфория)',
+    pts:[[-0.25,100],[0,90],[0.25,72],[0.5,50],[0.6,36],[0.7,20],[0.75,10],[0.85,0]],
+    why:'Net Unrealized Profit/Loss — доля нереализованной прибыли в капитализации. Ниже 0.25 рынок в зоне «капитуляция/надежда»; отрицательные значения = капитуляция (дно).'},
+  {id:'sopr',cat:'pl',name:'SOPR',w:12,unit:'',
+    get:()=>RAW.sopr.v, fmt:v=>fmtNum(v,4), band:'< 1.0 · монеты продают в убыток',
+    pts:[[0.90,100],[0.95,90],[1.0,60],[1.02,40],[1.05,22],[1.1,6]],
+    why:'Spent Output Profit Ratio: >1 — монеты в среднем продаются в прибыль, <1 — в убыток. Устойчивый SOPR<1 = капитуляция; возврат выше 1 — ранний признак разворота.'},
+  {id:'puell',cat:'pl',name:'Puell Multiple (майнеры)',w:6,unit:'',
+    get:()=>RAW.puell.v, fmt:v=>fmtNum(v,3), band:'дно < 0.5 · вершина > 2.5',
+    pts:[[0.3,100],[0.5,90],[0.7,80],[1.0,58],[1.5,40],[2.2,22],[3,8],[4.5,0]],
+    why:'Доходность майнеров относительно годовой средней. Ниже 0.5 — стресс/капитуляция майнеров, исторически совпадает с ценовым дном.'},
+
+  {id:'dormancy',cat:'pl',name:'Average Dormancy · контекст',w:0,unit:'',
+    get:()=>RAW.dormancy.v, fmt:v=>v==null?'—':fmtNum(v,2), band:'низкая = HODL/накопление (дно) · всплеск = распределение (вершина)',
+    pts:[[0,50]],
+    why:'Средняя «спячка» потраченных монет (дни): низкая = двигаются молодые монеты, старые HODL (дно); всплеск = старые монеты пошли на продажу (распределение → вершина). Пока контекст (вес 0) — точные пороги задам по 4-летней истории/перцентилям, шкала требует калибровки.'},
+
+  // --- ТЕХНИКА ---
+  {id:'mayer',cat:'tech',name:'Mayer Multiple (цена/200DMA)',w:6,unit:'',
+    get:()=> (RAW.price.v&&RAW.sma200.v)? RAW.price.v/RAW.sma200.v : null, fmt:v=>fmtNum(v,3), band:'дно < 0.8 · вершина > 2',
+    pts:[[0.6,100],[0.8,82],[1.0,58],[1.2,44],[1.5,26],[2.0,10],[2.7,0]],
+    why:'Отношение цены к 200-дневной средней. Ниже 0.8 — историческая зона накопления; выше 2.4 — перегрев.'},
+  {id:'rsi',cat:'tech',name:'RSI (дневной, 14)',w:4,unit:'',
+    get:()=>RAW.rsi.v, fmt:v=>fmtNum(v,1), band:'< 30 перепродан (дно) · > 70 перекуплен (вершина)',
+    pts:[[25,100],[30,90],[40,70],[50,50],[70,12],[80,0]],
+    why:'Индекс относительной силы. Ниже 30 — перепроданность (сигнал дна). Разворот RSI вверх от <30 учитывается в блоке «Reversal».'},
+  {id:'drawdown',cat:'tech',name:'Просадка от ATH',w:4,unit:'%',
+    get:()=> (RAW.price.v&&RAW.ath.v)? (RAW.price.v/RAW.ath.v-1)*100 : null, fmt:v=>fmtPct(v,1), band:'глубже −70% · медвежье дно',
+    pts:[[-90,100],[-75,90],[-60,72],[-50,55],[-30,30],[0,0]],
+    why:'Падение от исторического максимума. Медвежьи циклы BTC исторически заканчивались на −75…−85%.'},
+  {id:'bmsb',cat:'tech',name:'Цена / 20-нед. MA (BMSB)',w:3,unit:'',
+    get:()=> (RAW.price.v&&RAW.sma20w.v)? RAW.price.v/RAW.sma20w.v : null, fmt:v=>fmtNum(v,3), band:'ниже полосы · медвежий режим',
+    pts:[[0.6,100],[0.8,80],[1.0,52],[1.2,20],[1.5,5]],
+    why:'Bull Market Support Band (~20-нед. MA). Цена под полосой — медвежий режим/дно; уверенный возврат выше — ключевой сигнал разворота.'},
+  {id:'p50',cat:'tech',name:'Цена / 50-дн. MA',w:3,unit:'',
+    get:()=> (RAW.price.v&&RAW.sma50.v)? RAW.price.v/RAW.sma50.v : null, fmt:v=>fmtNum(v,3), band:'< 0.85 · глубоко под трендом',
+    pts:[[0.8,95],[1.0,55],[1.1,30],[1.3,8]],
+    why:'Краткосрочный тренд. Далеко ниже 50-дневной средней — перепроданность; возврат выше — улучшение импульса.'},
+
+  // --- СЕНТИМЕНТ ---
+  {id:'fng',cat:'sent',name:'Индекс страха и жадности',w:6,unit:'',
+    get:()=>RAW.fng.v, fmt:v=>v==null?'—':Math.round(v)+'', band:'< 25 страх (дно) · > 80 жадность (вершина)',
+    pts:[[5,100],[10,95],[20,86],[25,78],[45,55],[55,45],[75,15],[90,0]],
+    why:'Агрегатор настроений (волатильность, объёмы, соцсети, опросы). Крайний страх (<25) — исторически лучшие зоны для накопления.'},
+
+  // --- ЦИКЛ ---
+  {id:'rhodl',cat:'cyc',name:'RHODL Ratio',w:5,unit:'',
+    get:()=>RAW.rhodl.v, fmt:v=>fmtNum(v,0), band:'нижняя зелёная полоса · дно',
+    pts:[[300,100],[1000,90],[3000,70],[8000,45],[20000,20],[35000,6],[50000,0]],
+    why:'Соотношение «молодых» и «старых» удержанных монет. Низкие значения — доминируют долгосрочные держатели, монеты «осели» (дно цикла).'},
+  {id:'halving',cat:'cyc',name:'Позиция цикла (мес. до халвинга)',w:3,unit:' мес',
+    get:()=>monthsToHalving(), fmt:v=>v==null?'—':fmtNum(v,1)+' мес', band:'≈17–18 мес до халвинга · дно и старт восстановления',
+    pts:[[3,55],[9,78],[12,88],[15,96],[18,100],[21,85],[24,66],[30,44],[36,25],[42,12]],
+    why:'Исторические медвежьи дна формировались за ~17–18 мес до халвинга (янв-2015, дек-2018, ноя-2022 — все ≈17–18 мес), и там же начинается восстановление. Следующий халвинг ≈ апрель 2028. Оговорка: как причинный драйвер халвинг слабеет (важнее глобальная ликвидность), поэтому вес малый.'},
+
+  {id:'piCycle',cat:'cyc',name:'Pi Cycle Top (111DMA / 2×350DMA) · контекст на дне',w:0,unit:'',
+    get:()=> (RAW.sma111.v&&RAW.sma350.v)? RAW.sma111.v/(2*RAW.sma350.v) : null, fmt:v=>fmtNum(v,3), band:'вершина при ≈ 1.0 (111DMA пробивает 2×350DMA)',
+    pts:[[0.3,100],[0.5,85],[0.7,60],[0.85,35],[0.95,12],[1.0,3],[1.2,0]],
+    why:'Классический сигнал ВЕРШИНЫ цикла: когда 111-дневная средняя пересекает удвоенную 350-дневную (отношение ≈ 1), исторически совпадало с макро-вершиной в пределах пары дней. Значение << 1 = далеко от вершины. В модели дна — контекст (вес 0): низкое значение = «не вершина», а не «дно», поэтому донный балл оно не формирует; в модели вершины вес большой (10).'},
+  {id:'twoYMA',cat:'cyc',name:'2Y MA multiplier (цена / 2-летняя MA)',w:5,unit:'',
+    get:()=> (RAW.price.v&&RAW.sma730.v)? RAW.price.v/RAW.sma730.v : null, fmt:v=>fmtNum(v,3), band:'дно < 1.0 (цена ниже 2-лет. MA) · вершина ≈ ×5',
+    pts:[[0.6,100],[0.8,92],[1.0,72],[1.5,50],[2.5,30],[3.5,15],[5,3]],
+    why:'Отношение цены к 2-летней скользящей средней. Ниже 1 (цена под 2-летней MA) — историческая зона накопления; около ×5 — зона вершины.'},
+
+  // --- ДЕРИВАТИВЫ ---
+  {id:'funding',cat:'der',name:'Ставка финансирования (перп)',w:5,unit:'%',
+    get:()=>RAW.funding.v, fmt:v=>v==null?'—':fmtNum(v,4)+'%', band:'≤ 0 · нет плечевого лонга',
+    pts:[[-0.05,100],[-0.01,88],[0,72],[0.01,50],[0.03,22],[0.06,10],[0.12,3]],
+    why:'Отрицательная/нулевая ставка = отсутствие плечевого оптимизма, часто у дна. Данные — Binance (живьём/вручную).'},
+
+  {id:'dvol',cat:'der',name:'DVOL (подразум. волатильность)',w:2,unit:'',
+    get:()=>RAW.dvol.v, fmt:v=>v==null?'—':fmtNum(v,1), band:'высокая (>90) страх/капитуляция · низкая (<35) самоуспокоение',
+    pts:[[25,20],[40,50],[60,65],[80,80],[110,100]],
+    why:'Индекс подразумеваемой волатильности BTC (Deribit DVOL). Всплеск (паника) часто у капитуляционного дна; очень низкая волатильность = самоуспокоение (риск вершины). Малый вес — сигнал неоднозначный.'},
+  {id:'oi',cat:'der',name:'Open interest (Deribit перп) · контекст',w:0,unit:'',
+    get:()=>RAW.oiUsd.v, fmt:v=>v==null?'—':'$'+(v/1e6).toFixed(0)+'M', band:'контекст: плечо в системе (для балла нужен агрегат по биржам)',
+    pts:[[0,50]],
+    why:'Открытый интерес по перпу (Deribit). Показан как контекст: funding + высокий OI = хрупкость. Для балла нужен агрегированный OI по всем биржам (Coinglass); Deribit-only не репрезентативен.'},
+
+  // --- МАКРО / ЛИКВИДНОСТЬ / ПОТОКИ ---
+  {id:'etfFlow',cat:'macro',name:'ETF net flow (30д, $B)',w:2,unit:'',srcTxt:'ручной (Farside/CoinGlass)',
+    get:()=>RAW.etfFlow.v, fmt:v=>v==null?'—':(v>0?'+':'')+fmtNum(v,1)+'B', band:'приток = спрос (дно/разворот) · отток = распределение (вершина)',
+    pts:[[-5,10],[-2,30],[0,50],[2,68],[5,85]],
+    why:'Чистый поток в спот-BTC-ETF за 30 дней ($B). Устойчивый приток = институциональный спрос (поддержка дна/разворота); устойчивый отток = распределение (сигнал вершины). Свободного live-API нет — введи число с Farside вручную (это даёт модели вершины независимый сигнал распределения).'},
+  {id:'stablecoin',cat:'macro',name:'Stablecoin supply · контекст',w:0,unit:'',
+    get:()=>RAW.stablecoin.v, fmt:v=>v==null?'—':'$'+(v/1e9).toFixed(0)+'B', band:'контекст: рост = приток крипто-ликвидности («топливо»)',
+    pts:[[0,50]],
+    why:'Суммарная капитализация стейблкоинов (DefiLlama, live). Рост = ликвидность/«топливо» для покупок прибывает, падение = уходит. Сигнал в ТЕМПЕ роста, а не в уровне — показан как контекст.'},
+  {id:'m2',cat:'macro',name:'Global M2 · контекст',w:0,unit:'',
+    get:()=>RAW.m2.v, fmt:v=>v==null?'—':'$'+(v/1e12).toFixed(0)+'T', band:'контекст: рост Global M2 = попутный ветер ликвидности',
+    pts:[[0,50]],
+    why:'Глобальная денежная масса M2 (США+ЕЗ+Китай+Япония+UK в USD). BTC коррелирует именно с ГЛОБАЛЬНОЙ ликвидностью (лаг ~10–12 недель), а не только с US M2 — поэтому Global. Медленная, показана как контекст; live — через агрегатор/ключ FRED.'},
+
+  {id:'cbPremium',cat:'macro',name:'Coinbase premium (%)',w:2,unit:'%',srcTxt:'Coinbase − Deribit index',
+    get:()=> (RAW.cbPrice.v&&RAW.deribitIndex.v)? (RAW.cbPrice.v-RAW.deribitIndex.v)/RAW.deribitIndex.v*100 : null, fmt:v=>v==null?'—':(v>0?'+':'')+fmtNum(v,2)+'%', band:'>0 = спрос США (спот) · <0 = продажи США',
+    pts:[[-0.5,25],[-0.15,40],[0,52],[0.15,66],[0.4,80]],
+    why:'Премия Coinbase к глобальному индексу (Deribit) — прокси спроса США на спот. Устойчиво положительная = американские деньги покупают (поддержка дна/разворота); отрицательная = продают. Считается вживую (Coinbase + Deribit index).'},
+  {id:'us10y',cat:'macro',name:'Доходность US10Y',w:2.5,unit:'%',
+    get:()=>RAW.us10y.v, fmt:v=>fmtPct(v,2), band:'снижение ставок · попутный ветер',
+    pts:[[2.5,82],[3.5,62],[4.0,54],[4.5,45],[5.0,32],[5.5,20]],
+    why:'Высокие ставки — встречный ветер для рисковых активов. Разворот ставок вниз обычно поддерживает крипто. Малый вес.'},
+  {id:'dxy',cat:'macro',name:'Индекс доллара DXY',w:1.5,unit:'',
+    get:()=>RAW.dxy.v, fmt:v=>v==null?'—':fmtNum(v,1), band:'снижение DXY · попутный ветер',
+    pts:[[95,80],[100,58],[104,46],[108,30],[112,18]],
+    why:'Сильный доллар давит на BTC. Впиши текущий уровень вручную или подтяни живьём. Малый вес.'}
+];
+
+/* ============================================================
+   4. ДВИЖОК «РАЗВОРОТ» (Reversal) — отдельный балл 0..100
+   Выше = больше подтверждений разворота вверх.
+   ============================================================ */
+const REV = [
+  {id:'r_bmsb',name:'Возврат цены выше 20-нед. MA',w:22,
+    get:()=> (RAW.price.v&&RAW.sma20w.v)? RAW.price.v/RAW.sma20w.v : null,
+    pts:[[0.8,10],[0.9,25],[0.97,40],[1.0,55],[1.03,72],[1.1,90]]},
+  {id:'r_p50',name:'Возврат цены выше 50-дн. MA',w:16,
+    get:()=> (RAW.price.v&&RAW.sma50.v)? RAW.price.v/RAW.sma50.v : null,
+    pts:[[0.85,12],[0.95,35],[1.0,55],[1.05,72],[1.15,90]]},
+  {id:'r_rsi',name:'Импульс RSI (уровень + рост)',w:18,
+    get:()=>RAW.rsi.v, pts:[[25,10],[35,30],[45,50],[55,70],[65,85]],
+    bonus:()=>{const d=(RAW.rsi.v??0)-(RAW.rsiPrev.v??0); return Math.max(0,Math.min(10,d));}},
+  {id:'r_sopr',name:'SOPR возвращается выше 1.0',w:16,
+    get:()=>RAW.sopr.v, pts:[[0.95,20],[0.99,42],[1.0,55],[1.01,68],[1.03,82]]},
+  {id:'r_real',name:'Цена выше реализованной (себест.)',w:16,
+    get:()=> (RAW.price.v&&RAW.realized.v)? RAW.price.v/RAW.realized.v : null,
+    pts:[[0.9,20],[1.0,50],[1.1,66],[1.2,78],[1.4,90]]},
+  {id:'r_mom',name:'30-дн. импульс цены',w:12,
+    get:()=>RAW.mom30.v, pts:[[-25,10],[-10,30],[0,50],[10,70],[25,88]]},
+  {id:'r_sth',name:'Возврат цены выше STH realized price',w:18,
+    get:()=> (RAW.price.v&&RAW.sthRealized.v)? RAW.price.v/RAW.sthRealized.v : null,
+    pts:[[0.85,15],[0.95,35],[1.0,55],[1.05,72],[1.15,88]]},
+  {id:'r_etf',name:'ETF-потоки (спрос vs распределение)',w:12,
+    get:()=>RAW.etfFlow.v, pts:[[-5,10],[-2,30],[0,50],[2,70],[5,88]]}
+];
+
+/* ============================================================
+   5. РАСЧЁТ
+   ============================================================ */
+function scoreColor(s){ if(s==null) return 'var(--mut2)';
+  return s>=80?'var(--grn)':s>=60?'var(--yel)':s>=40?'var(--org)':'var(--red)'; }
+function scoreColorInv(s){ if(s==null) return 'var(--mut2)';
+  return s>=80?'var(--red)':s>=65?'#f0703a':s>=50?'var(--org)':s>=35?'var(--yel)':'var(--grn)'; }
+// «живость» метрики: какие RAW-ключи должны быть обновлены. Пусто = считается из даты (всегда live).
+let hasRefreshed=false;
+const LIVEKEYS={mvrvRatio:['price','realized'],reserveRisk:['price','hodlBank'],sthPrice:['price','sthRealized'],mayer:['price','sma200'],drawdown:['price','ath'],bmsb:['price','sma20w'],p50:['price','sma50'],piCycle:['sma111','sma350'],twoYMA:['price','sma730'],oi:['oiUsd'],cbPremium:['cbPrice','deribitIndex'],halving:[]};
+function metricLive(m){ const ks=LIVEKEYS[m.id]||[m.id]; return ks.length===0 || ks.every(k=>RAW[k]&&RAW[k].live===true); }
+function updatePctNote(){ const el=document.getElementById('pctNote'); if(!el) return;
+  const days=Math.floor((Date.now()-new Date(PCT_DATE))/864e5); const stale=days>35;
+  el.textContent='перцентили: '+(PCT_APPROX?'≈прибл., ':'')+days+' дн. назад'+(stale?' ⚠️ устарели':'');
+  el.style.color=stale?'#ff8a8a':'var(--mut2)'; }
+function pctHelp(){ alert('Перцентильные полосы (4-летнее окно) пересчитываются раз в месяц фоновой автозадачей — серверно, в обход CORS.\n\nСЕЙЧАС пересчитать вручную: попроси Claude запустить пересчёт перцентилей, либо нажми «Run now» на задаче btc-dashboard-pct-rebake в разделе Scheduled.\n\nВ БУДУЩЕМ (облачная версия) эта кнопка будет считать сама по клику — бэкенд обновит полосы без CORS и без твоего участия.'); }
+
+// Перцентильные полосы (4-летнее окно). ПРИБЛИЗИТЕЛЬНЫЕ — реальные пересчитывает автозадача раз в месяц.
+// Формат: [значение, перцентиль]. Дата последнего пересчёта в PCT_DATE.
+let PCT_DATE='2026-07-08', PCT_APPROX=false;
+const PCTBANDS={
+  mvrvZ:[[-0.1537,5],[0.4636,25],[1.2593,50],[2.1488,75],[2.7769,95]],
+  nupl:[[-0.1146,5],[0.2287,25],[0.4254,50],[0.5354,75],[0.5944,95]],
+  puell:[[0.52,5],[0.7553,25],[1.012,50],[1.254,75],[1.611,95]],
+  mayer:[[0.6819,5],[0.866,25],[1.0815,50],[1.2364,75],[1.4548,95]],
+  rhodl:[[295.402,5],[671.094,25],[2021.88,50],[3480.81,75],[6513.88,95]]
+};
+function absB(m){ return interp(m.pts, m.get()); }        // абсолютная «bottomness» (переякоренные пороги)
+function pctB(m){ const b=PCTBANDS[m.id]; const v=m.get(); if(!b||v==null) return null; return 100 - interp(b,v); }
+// Гибрид с МЯГКОЙ РАМПОЙ (Fable): перцентиль ПОДТВЕРЖДАЕТ, а не порождает экстремум.
+// w=clamp((a-45)/20,0,1); eff=a+w*max(0,p-a). a≤45 → перцентиль молчит (нет фальш-доньев во флэте);
+// a≥65 → чистый max(a,p) (ловит затухшие циклы); между — плавно. Для вершины считаем на топ-оси (100-a,100-p).
+function ramp(a,p){ if(p==null) return a; const w=Math.max(0,Math.min(1,(a-45)/20)); return a + w*Math.max(0,p-a); }
+function effScore(m,kind){ const a=absB(m); if(a==null) return null; const p=pctB(m);
+  return kind==='T' ? ramp(100-a, (p==null?null:100-p)) : ramp(a,p); }
+// --- A+ #1 семейства драйверов + #3 каденс свежести ---
+// META: id -> [семейство_драйвера, каденс_свежести]
+const META={
+  mvrvZ:['price','onchain'], mvrvRatio:['price','onchain'], reserveRisk:['price','onchain'], sthPrice:['price','onchain'],
+  nupl:['price','onchain'], sopr:['behavior','onchain'], puell:['behavior','onchain'], dormancy:['behavior','onchain'],
+  mayer:['price','priceTech'], rsi:['price','priceTech'], drawdown:['price','priceTech'], bmsb:['price','priceTech'], p50:['price','priceTech'],
+  fng:['behavior','priceTech'], rhodl:['behavior','onchain'], halving:['clock','clock'], piCycle:['price','priceTech'], twoYMA:['price','priceTech'],
+  funding:['positioning','positioning'], dvol:['positioning','positioning'], oi:['positioning','positioning'],
+  etfFlow:['flow','flow'], stablecoin:['flow','flow'], cbPremium:['flow','flow'],
+  m2:['macro','macroM'], us10y:['macro','macroD'], dxy:['macro','macroD']
+};
+const BUDGET={ B:{price:45,behavior:25,positioning:8,flow:10,macro:8,clock:4},
+               T:{price:40,behavior:30,positioning:15,flow:12,macro:0,clock:3} };
+// каденс -> [ttl, tau] дней. Штраф только за просрочку сверх нормального лага источника.
+const DECAY={ priceTech:[1,2], onchain:[5,7], positioning:[1,2], flow:[3,5], macroD:[4,7], macroM:[45,30], clock:[1e9,1] };
+const FAMRU={price:'ценовые',behavior:'поведенческие',positioning:'позиционные',flow:'потоки',macro:'макро',clock:'цикл'};
+function famOf(id){ return (META[id]||['price'])[0]; }
+function ageDays(m){ const ks=LIVEKEYS[m.id]||[m.id]; let mx=0,any=false;
+  for(const k of ks){ const d=RAW[k]&&RAW[k].date; if(d){ const a=(Date.now()-new Date(d))/864e5; if(a>mx)mx=a; any=true; } }
+  return any?mx:0; }
+function effWeight(m,baseW){ const cad=(META[m.id]||['','onchain'])[1]; const dz=DECAY[cad]||[5,7];
+  return baseW*Math.exp(-Math.max(0,ageDays(m)-dz[0])/dz[1]); }
+function isStale(m){ const cad=(META[m.id]||['','onchain'])[1]; const dz=DECAY[cad]||[5,7];
+  return ageDays(m) > dz[0]+2*dz[1]; }
+
+// Композит: #1 бюджеты семейств (перенорм ВНУТРИ семейства) · #3 затухание веса по свежести · #7 coverage+shrinkage
+function computeModel(kind){
+  const budget=BUDGET[kind==='T'?'T':'B'];
+  const fam={}; let totalRaw=0, totalPresent=0;
+  for(const m of METRICS){
+    const baseW = kind==='T' ? (TOPW[m.id]||0) : m.w;
+    if(baseW<=0) continue;
+    totalRaw+=baseW;
+    const val=effScore(m,kind); if(val==null) continue;
+    const w=effWeight(m,baseW); const f=famOf(m.id);
+    fam[f]=fam[f]||{num:0,wsum:0}; fam[f].num+=val*w; fam[f].wsum+=w;
+    totalPresent+=baseW;
+  }
+  let num=0,bsum=0; const famScore={};
+  for(const f in fam){ if(fam[f].wsum<=0) continue; const b=budget[f]||0; famScore[f]=fam[f].num/fam[f].wsum;
+    if(b>0){ num+=famScore[f]*b; bsum+=b; } }
+  const raw = bsum? num/bsum : null;
+  const coverage = totalRaw? totalPresent/totalRaw : 0;
+  let score=raw, insufficient=coverage<0.35;
+  if(raw!=null && !insufficient){ const fsh=Math.max(0.6,Math.min(1,Math.sqrt(coverage/0.8))); score=50+(raw-50)*fsh; }
+  return {score: insufficient?null:score, raw, coverage, insufficient, den:bsum, famScore};
+}
+function computeBottom(){
+  const per={}, catAgg={};
+  for(const m of METRICS){ const s=effScore(m,'B'); per[m.id]={raw:m.get(),score:s};
+    if(s!=null){ catAgg[m.cat]=catAgg[m.cat]||{num:0,den:0}; catAgg[m.cat].num+=s*m.w; catAgg[m.cat].den+=m.w; } }
+  const M=computeModel('B');
+  return {score:M.score, raw:M.raw, coverage:M.coverage, insufficient:M.insufficient, den:M.den, per, catAgg, famScore:M.famScore};
+}
+function computeTop(){ return computeModel('T'); }
+function computeReversal(){
+  let num=0,den=0; const per={};
+  for(const r of REV){
+    let s=interp(r.pts,r.get());
+    if(s!=null && r.bonus) s=Math.min(100,s+r.bonus());
+    per[r.id]=s;
+    if(s!=null){ num+=s*r.w; den+=r.w; }
+  }
+  return {score: den?num/den:null, per};
+}
+
+/* ============================================================
+   6. ГАУГ (полукруг, SVG)
+   ============================================================ */
+function gauge(el,score,invert){
+  const s=score==null?0:Math.max(0,Math.min(100,score));
+  const col=(invert?scoreColorInv:scoreColor)(score);
+  const R=120,cx=150,cy=150,sw=20;
+  const f=s/100;
+  const a0=Math.PI, a1=Math.PI*(1 - f);          // 180° (слева) → 0° (справа)
+  const pt=(a)=>[cx+R*Math.cos(a), cy - R*Math.sin(a)]; // верхняя полуокружность
+  const [x0,y0]=pt(a0), [x1,y1]=pt(a1);
+  const large=0;                                  // дуга всегда ≤180°
+  const track=`M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}`;
+  const val = f<=0.002 ? '' : `M ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1}`;
+  el.innerHTML=`<svg viewBox="0 0 300 175" width="100%" style="max-width:320px">
+    <path d="${track}" fill="none" stroke="#0c1220" stroke-width="${sw}" stroke-linecap="round"/>
+    <path d="${val}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"/>
+    <text x="150" y="130" text-anchor="middle" font-size="52" font-weight="800" fill="${col}">${score==null?'—':Math.round(score)}</text>
+    <text x="150" y="158" text-anchor="middle" font-size="13" fill="#96a3bd">из 100</text>
+    <text x="30" y="170" font-size="11" fill="#6f7d99">вершина</text>
+    <text x="238" y="170" font-size="11" fill="#6f7d99">дно</text>
+  </svg>`;
+}
+
+/* ============================================================
+   7. РЕНДЕР
+   ============================================================ */
+function bottomBand(s){
+  if(s>=80) return ['ГЛУБОКОЕ ДНО / КАПИТУЛЯЦИЯ','var(--grn)'];
+  if(s>=65) return ['ЗОНА ДНА · глубокая недооценка','#4fca8f'];
+  if(s>=50) return ['НАКОПЛЕНИЕ · недооценён','var(--yel)'];
+  if(s>=35) return ['НЕЙТРАЛЬНО','var(--org)'];
+  if(s>=20) return ['ДОРОГО · поздний цикл','#f0703a'];
+  return ['ЭЙФОРИЯ / РИСК ВЕРШИНЫ','var(--red)'];
+}
+function revBand(s){
+  if(s>=70) return ['ТРЕНД ВВЕРХ ПОДТВЕРЖДЁН','var(--grn)'];
+  if(s>=55) return ['РАЗВОРОТ ВВЕРХ · набирает силу','#4fca8f'];
+  if(s>=45) return ['НЕЙТРАЛЬНО / боковик','var(--yel)'];
+  if(s>=30) return ['СЛАБОСТЬ · тренд вниз','var(--org)'];
+  return ['СЛОМ ВНИЗ / РАСПРЕДЕЛЕНИЕ','var(--red)'];
+}
+function topBand(s){
+  if(s>=80) return ['ВЕРШИНА / РАСПРЕДЕЛЕНИЕ','var(--red)'];
+  if(s>=65) return ['ЗОНА ВЕРШИНЫ · эйфория','#f0703a'];
+  if(s>=50) return ['ПЕРЕГРЕВ · дорого','var(--org)'];
+  if(s>=35) return ['ПОВЫШЕННЫЙ РИСК','var(--yel)'];
+  if(s>=20) return ['УМЕРЕННО','#7fbf7f'];
+  return ['ДАЛЕКО ОТ ВЕРШИНЫ','var(--grn)'];
+}
+
+function render(){
+  const B=computeBottom(), Rv=computeReversal(), T=computeTop();
+
+  // цена
+  document.getElementById('priceBox').innerHTML =
+    (RAW.price.v?('$'+Math.round(RAW.price.v).toLocaleString('en-US')):'—')+' <small>BTC</small>';
+
+  // гауги
+  gauge(document.getElementById('gaugeBottom'),B.score);
+  gauge(document.getElementById('gaugeRev'),Rv.score);
+  gauge(document.getElementById('gaugeTop'),T.score,true);
+  const bb=bottomBand(B.score||0), rb=revBand(Rv.score||0), tb2=topBand(T.score||0);
+  document.getElementById('bottomVerdict').textContent=bb[0];
+  document.getElementById('bottomVerdict').style.color=bb[1];
+  document.getElementById('revVerdict').textContent=rb[0];
+  document.getElementById('revVerdict').style.color=rb[1];
+  document.getElementById('topVerdict').textContent=tb2[0];
+  document.getElementById('topVerdict').style.color=tb2[1];
+  document.getElementById('bottomDesc').textContent=
+    'Недооценка + капитуляция. Кластер MVRV/MVRV-Z/NUPL считается как ОДИН фактор (де-корреляция). 100 = дно.';
+  document.getElementById('revDesc').textContent=
+    'Двусторонний импульс/тренд. Высоко = разворот ВВЕРХ (цена выше 20-нед./50-дн. средних, SOPR>1, выше себестоимости) — пара к Дну. Низко = слом ВНИЗ / распределение — пара к Вершине.';
+  document.getElementById('topDesc').textContent=
+    'Зеркало дна с весами вершины: деривативы/плечо, RHODL, Reserve Risk, эйфория. 100 = сильные признаки распределения/вершины.';
+
+  // итоговый вердикт
+  const mvrvR=(RAW.price.v/RAW.realized.v);
+  const above20w = RAW.price.v>=RAW.sma20w.v;
+  const hot=METRICS.filter(m=>B.per[m.id]&&B.per[m.id].score!=null&&B.per[m.id].score<25).map(m=>m.name);
+  const hotTxt=hot.length?hot.slice(0,4).join(', '):'ключевые метрики';
+  const sumCard=document.getElementById('summaryCard');
+  sumCard.style.borderLeftColor = (T.score>=50)? tb2[1] : bb[1];
+  const fS=s=>s==null?'—':Math.round(s);
+  document.getElementById('summaryTitle').textContent=
+    `Дно ${fS(B.score)} · Импульс ${Math.round(Rv.score)} · Вершина ${fS(T.score)} (из 100)`;
+  // #1 счётчик не-ценовых подтверждений + #7 coverage
+  const npFams=['behavior','positioning','flow','macro'];
+  const npPresent=npFams.filter(f=>B.famScore&&B.famScore[f]!=null);
+  const npConfirm=npPresent.filter(f=>B.famScore[f]>=60);
+  const confLine=`Не-ценовых семейств подтверждает дно: <b>${npConfirm.length}/${npPresent.length}</b>${npConfirm.length?' ('+npConfirm.map(f=>FAMRU[f]).join(', ')+')':''} · покрытие: Дно ${Math.round((B.coverage||0)*100)}% · Вершина ${Math.round((T.coverage||0)*100)}%`;
+  let verdict='';
+  if(B.insufficient){
+    verdict=`<b>НЕДОСТАТОЧНО ДАННЫХ.</b> Покрытие модели дна ниже 35% — балл скрыт. Обнови данные (лимит/лаг bitcoin-data).`;
+  } else if(T.score!=null && T.score>=50){
+    verdict=`<b>ВЕРШИНА / РАСПРЕДЕЛЕНИЕ (${Math.round(T.score)}/100).</b> Перегреты: ${hotTxt}. Балл вершины считается с бóльшим весом деривативов/плеча и распределения. Снижай риск по мере роста признаков; подтверждение слома — уход цены ниже 20-нед. MA ($${Math.round(RAW.sma20w.v).toLocaleString('en-US')}) и SOPR&lt;1.`;
+  } else if(B.score>=65 && Rv.score<42){
+    verdict=`Рынок <b>в зоне дна</b>: глубокая недооценка по on-chain (MVRV Z ${fmtNum(RAW.mvrvZ.v,2)}, Reserve Risk на минимумах), капитуляция по прибыли/убытку (NUPL ${fmtNum(RAW.nupl.v,3)}, SOPR ${fmtNum(RAW.sopr.v,3)}) и крайний страх (F&G ${Math.round(RAW.fng.v)}). Но <b>устойчивый разворот вверх пока НЕ подтверждён</b> — цена ниже 20-нед. MA ($${Math.round(RAW.sma20w.v).toLocaleString('en-US')}) и 50-дн. MA, SOPR всё ещё <1. `+
+      `Сигналы к развороту, за которыми следить: возврат и закрепление цены выше <b>$${Math.round(RAW.sma20w.v).toLocaleString('en-US')}</b> (Bull Market Support Band), SOPR устойчиво >1, RSI выше 50.`;
+  } else if(B.score>=65 && Rv.score>=42){
+    verdict=`Рынок в зоне дна <b>и появились признаки разворота</b>: цена начала возвращаться к ключевым средним, импульс улучшается. Подтверждением станет закрепление выше 20-нед. MA ($${Math.round(RAW.sma20w.v).toLocaleString('en-US')}) и SOPR>1 на нескольких свечах.`;
+  } else if(B.score>=50){
+    verdict=`Рынок недооценён, но не в экстремальной капитуляции. Часть метрик уже в зелёной зоне; для «дна цикла» обычно нужно больше страха и глубже просадка. Разворот: ${Math.round(Rv.score)}/100.`;
+  } else if(B.score>=35){
+    verdict=`Нейтральная зона — ни явного дна, ни вершины. Дождитесь смещения on-chain и сентимент-метрик в одну из сторон.`;
+  } else if(B.score>=20){
+    verdict=`<b>Поздняя стадия цикла · дорого.</b> В зоне распределения: ${hotTxt}. Риск вершины повышен. Подтверждение вершины — слом импульса: потеря 20-нед. MA ($${Math.round(RAW.sma20w.v).toLocaleString('en-US')}), SOPR&lt;1 и RSI&lt;50 после эйфории.`;
+  } else {
+    verdict=`<b>ЭЙФОРИЯ · ЗОНА ВЕРШИНЫ.</b> Множество метрик в исторической зоне распределения: ${hotTxt}. Это зеркало дна — агрегатор сигналит «дорого / фиксируй прибыль». Учитывай снижение пиков из цикла в цикл: современная вершина регистрируется на меньших значениях, чем в 2017. Сигнал слома тренда — уход цены ниже 20-нед. MA и SOPR&lt;1.`;
+  }
+  document.getElementById('summaryText').innerHTML=verdict+'<div style="margin-top:8px;padding-top:6px;border-top:1px solid #2a3352;font-size:12px;color:#9fb0cc">'+confLine+'</div>';
+
+  // карточки категорий
+  const cc=document.getElementById('catCards'); cc.innerHTML='';
+  for(const key in CATS){
+    const agg=B.catAgg[key]; const s=agg&&agg.den?agg.num/agg.den:null;
+    const col=scoreColor(s);
+    const div=document.createElement('div'); div.className='catcard';
+    div.innerHTML=`<div class="n">${CATS[key].name}</div>
+      <div class="s" style="color:${col}">${s==null?'—':Math.round(s)}</div>
+      <div class="w">вес ${(agg?agg.den:0).toFixed(1).replace('.0','')}%</div>
+      <div class="bar"><i style="width:${s||0}%;background:${col}"></i></div>`;
+    cc.appendChild(div);
+  }
+
+  // таблица
+  const tb=document.getElementById('metricsBody'); tb.innerHTML='';
+  const clRow=document.createElement('tr');
+  clRow.innerHTML=`<td colspan="7" style="background:#20183a;border-left:3px solid #7c5cff;font-size:12px;color:#cdbcff;padding:8px 12px">🔗 <b>Cost-basis (де-корреляция)</b>: MVRV-Z и NUPL — две нормализации одного сигнала (MVRV-Z делит на σ, NUPL — на капитализацию). Чтобы не считать сигнал дважды, каждой дан прямой вес <b>9%</b> (вместе 18% в модели дна; 8%+8% для вершины). <b>MVRV (цена/реализ.) — контекст, вес 0</b>: он алгебраически равен NUPL (NUPL = 1 − 1/MVRV).</td>`;
+  tb.appendChild(clRow);
+  const order=['val','pl','tech','sent','cyc','der','macro'];
+  const clSum={}; for(const cid in CLUSTER){ clSum[cid]=CLUSTER[cid].ids.reduce((a,id)=>{const mm=METRICS.find(x=>x.id===id); return a+(mm?mm.w:0);},0); }
+  for(const cat of order){
+    const hdr=document.createElement('tr'); hdr.className='cathdr';
+    hdr.innerHTML=`<td colspan="7">${CATS[cat].name}</td>`; tb.appendChild(hdr);
+    for(const m of METRICS.filter(x=>x.cat===cat)){
+      const raw=m.get(); const s=interp(m.pts,raw); const col=scoreColor(s);
+      const stTxt = s==null?'нет данных': s>=80?'сильный сигнал дна': s>=60?'умеренный': s>=40?'нейтрально':'дорого/риск';
+      const editKey = m.rawKey || m.id;
+      const editable = (RAW[m.id]!==undefined);
+      const live = metricLive(m);
+      const tr=document.createElement('tr');
+      if((hasRefreshed && !live) || isStale(m)) tr.style.boxShadow='inset 4px 0 0 #ff5a5a';
+      tr.innerHTML=`
+        <td><b class="mname" data-why="${(m.why||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${m.name} <span class="ic">ⓘ</span></b>${m.cluster?' <span class="tag" style="border-color:#7c5cff;color:#b7a4ff">🔗 cost-basis</span>':''}</td>
+        <td class="num">${
+          editable
+          ? `<input class="val" type="number" step="any" value="${raw==null?'':(+raw).toPrecision(6).replace(/\.?0+$/,'')}" data-k="${m.id}">`
+          : m.fmt(raw)
+        }</td>
+        <td style="color:var(--mut);font-size:12px">${m.band}</td>
+        <td><span class="st" style="color:${col}"><span class="dot" style="background:${col}"></span>${stTxt}</span></td>
+        <td class="num"><span class="scorechip" style="background:${col};color:#08110c">${s==null?'—':Math.round(s)}</span></td>
+        <td class="num"><input class="wt" type="number" step="0.5" min="0" value="${m.w}" data-w="${m.id}">${m.cluster?('<div style="font-size:10px;color:#b7a4ff">= '+Math.round(m.w/(clSum[m.cluster]||1)*100)+'% кластера</div>'):''}</td>
+        <td style="font-size:12px;color:var(--mut)">${(RAW[m.id]&&RAW[m.id].src)||m.srcTxt||'вычисляется'} ${hasRefreshed?(live?'<span class="tag live">live</span>':'<span class="tag" style="border-color:#ff5a5a;color:#ff8a8a">снимок</span>'):'<span class="tag">снимок</span>'}</td>`;
+      tb.appendChild(tr);
+    }
+  }
+  // навесить обработчики
+  tb.querySelectorAll('input.val').forEach(inp=>inp.addEventListener('input',e=>{
+    const k=e.target.dataset.k; const val=e.target.value===''?null:parseFloat(e.target.value);
+    if(RAW[k]){ RAW[k].v=val; if(val!==null){RAW[k].src='ручной';RAW[k].live=false;} }
+    render();
+  }));
+  tb.querySelectorAll('input.wt').forEach(inp=>inp.addEventListener('input',e=>{
+    const k=e.target.dataset.w; const m=METRICS.find(x=>x.id===k); if(m) m.w=parseFloat(e.target.value)||0; render();
+  }));
+
+  // статус источников
+  renderSrcStat();
+}
+
+function renderSrcStat(){
+  const el=document.getElementById('srcStat');
+  const groups={};
+  METRICS.forEach(m=>{const r=RAW[m.id]; if(!r)return; const s=r.live?'live':(r.src||'снимок');});
+  el.innerHTML='<b>Свежесть:</b> снимок от '+SNAP.price.date+' · '+
+    METRICS.filter(m=>RAW[m.id]&&RAW[m.id].live).length+' метрик обновлено вживую в этой сессии. '+
+    'Метка «снимок» в строке = значение из файла; «live» = подтянуто из API.';
+}
+
+/* методология */
+function renderMethodology(){
+  let h='<p>Дэшборд отвечает на <b>три разных вопроса</b> — три отдельных балла:</p>'+
+  '<ul><li><b>Дно</b> — насколько актив недооценён и близок к капитуляции (100 = дно). Дёшево может оставаться дёшевым долго.</li>'+
+  '<li><b>Импульс (разворот)</b> — начал ли рынок разворачиваться вверх: возврат выше средних, RSI, SOPR&gt;1 (100 = разворот подтверждается).</li>'+
+  '<li><b>Вершина</b> — то же множество метрик как topness (100 − балл дна), но с весами вершины: тяжелее деривативы/плечо, RHODL, Reserve Risk, распределение (100 = эйфория/распределение).</li></ul>'+
+  '<p><b>Де-корреляция.</b> MVRV, MVRV-Z и NUPL описывают один сигнал — отношение market/realized. NUPL = 1 − 1/MVRV, то есть сырой MVRV и NUPL несут одну информацию, поэтому MVRV показан как контекст (вес 0). Каждой из них дан прямой вес <b>9%</b> (вместе 18% — столько заслуживает один фактор, а не 27% как тремя метриками раньше): MVRV-Z делит на σ (адаптируется к падающей волатильности), NUPL нормирован на капитализацию (шкала 0…1). Оговорка: обе всё равно затухают по циклам (пики MVRV-Z 8→7→4, NUPL 0.85→0.64) — это добивают перцентильные пороги. Реально независимы SOPR (поток), Puell (майнеры), Reserve Risk. F&amp;G понижен — наполовину собран из цены/волатильности.</p>'+
+  '<p><b>Перцентили + гибрид.</b> Для затухающих метрик (MVRV-Z, NUPL, Puell, Mayer, RHODL) считается ещё и перцентильный балл — где значение в своём 4-летнем диапазоне (самокалибровка под падающие пики циклов). Итоговый балл метрики = <b>более экстремальный из двух</b>: для дна max(абсолют, перцентиль), для вершины — max по топ-стороне. Перцентиль лечит затухание, абсолют — лаг перцентиля на свежем экстремуме. Полосы пересчитывает автозадача раз в месяц (пометка «≈прибл.» до первого пересчёта).</p>'+
+  '<p>Идеальный вход — когда Дно высоко И Импульс высоко: глубокая недооценка + подтверждённый разворот.</p>'+
+  '<p><b>Как считается балл метрики.</b> Каждое сырое значение переводится в балл 0–100 кусочно-линейной интерполяцией по историческим порогам (100 = максимальный сигнал дна). Затем баллы взвешиваются и агрегируются. Недоступные метрики исключаются, веса перенормируются. Веса категорий по умолчанию:</p>'+
+  '<ul><li>On-chain оценка — 25% · On-chain прибыль/убыток — 22% · Техника — 20% · Сентимент — 12% · Цикл — 12% · Деривативы — 5% · Макро — 4%</li></ul>'+
+  '<p><b>Детекция вершины.</b> Дэшборд симметричен: высокий балл = дно, низкий = вершина/эйфория. Верхние пороги переякорены под современный цикл, потому что пики on-chain метрик снижаются из цикла в цикл (MVRV Z: 2017 ≈ 8, ноябрь-2021 ≈ 4; Puell и NUPL формируют последовательно более низкие максимумы). Поэтому «зона вершины» срабатывает уже при MVRV Z ≈ 4, NUPL ≈ 0.7, Puell ≈ 2.5–3, Mayer ≈ 2 — не дожидаясь экстремумов 2017 года.</p>'+
+  '<p><b>Метрики и пороги (дно ↔ вершина):</b></p><ul>';
+  for(const m of METRICS){ h+=`<li><b>${m.name}</b> <span style="color:var(--mut)">(${CATS[m.cat].name}, вес ${m.w}%)</span> — ${m.why}</li>`; }
+  h+='</ul><p><b>Блок «Разворот»</b> строится на: возврате цены выше 20-нед. и 50-дн. средних, развороте RSI вверх, возврате SOPR выше 1.0, закреплении цены выше реализованной себестоимости и 30-дневном импульсе.</p>';
+  document.getElementById('methodology').innerHTML=h;
+}
+
+/* ============================================================
+   8. ЖИВОЕ ОБНОВЛЕНИЕ (бесплатные API, из браузера)
+   ============================================================ */
+async function jget(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(r.status); return r.json(); }
+// bitcoin-data.com блокирует CORS при открытии файла как file:// → пробуем напрямую, затем через публичные CORS-прокси
+const PROXY_WRAP=[u=>u, u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u), u=>'https://corsproxy.io/?url='+encodeURIComponent(u)];
+async function jgetP(url){ for(const w of PROXY_WRAP){ try{ const r=await fetch(w(url),{cache:'no-store'}); if(r.ok) return await r.json(); }catch(e){} } throw new Error('all proxies failed'); }
+function sma(arr,n){ if(arr.length<n) return null; const s=arr.slice(-n); return s.reduce((a,b)=>a+b,0)/n; }
+function rsiCalc(closes,n=14){ if(closes.length<n+1) return null; let g=0,l=0;
+  for(let i=closes.length-n;i<closes.length;i++){const d=closes[i]-closes[i-1]; if(d>=0)g+=d; else l-=d;}
+  const rs=(g/n)/((l/n)||1e-9); return 100-100/(1+rs); }
+
+// --- B3: чтение снимка с бэкенда (GitHub Actions → data.json). Ценовые производные считаются из канонического ряда. ---
+const DATA_URL='https://raw.githubusercontent.com/NNP555/btc-dashboard/main/data.json';
+function computeDerived(cl, ath){
+  const n=cl.length, last=cl[n-1];
+  RAW.price={v:last,src:'Kraken (бэкенд)',live:true};
+  RAW.ath={v:Math.max(ath||0,...cl),src:'бэкенд',live:true};
+  RAW.sma50={v:sma(cl,50),src:'ряд цены',live:true};
+  RAW.sma200={v:sma(cl,200),src:'ряд цены',live:true};
+  RAW.sma20w={v:sma(cl,140),src:'ряд цены',live:true};
+  RAW.sma111={v:sma(cl,111),src:'ряд цены',live:true};
+  RAW.sma350={v:sma(cl,350),src:'ряд цены',live:true};
+  const s730=sma(cl,730); if(s730!=null) RAW.sma730={v:s730,src:'ряд цены',live:true};
+  RAW.rsi={v:rsiCalc(cl,14),src:'ряд цены',live:true};
+  RAW.rsiPrev={v:rsiCalc(cl.slice(0,n-3),14),src:'ряд цены',live:true};
+  if(n>31) RAW.mom30={v:(last/cl[n-31]-1)*100,src:'ряд цены',live:true};
+}
+async function loadBackend(){
+  const note=document.getElementById('liveNote'); if(note) note.textContent='⟳ загружаю снимок с бэкенда…';
+  try{
+    const j=await jget(DATA_URL+'?t='+Date.now());
+    let cnt=0;
+    for(const k in (j.metrics||{})){ const m=j.metrics[k]; if(m&&m.v!=null){ RAW[k]={v:m.v,src:(m.src||'бэкенд'),date:m.d,live:true}; cnt++; } }
+    if(Array.isArray(j.priceSeries)&&j.priceSeries.length>200) computeDerived(j.priceSeries.map(p=>p.c), j.ath);
+    hasRefreshed=true; render();
+    const asof=(j.asof||'').slice(0,16).replace('T',' ');
+    const a=document.getElementById('asof'); if(a) a.textContent='бэкенд-снимок: '+asof+' UTC';
+    if(note) note.textContent='⟳ живой снимок с GitHub · '+cnt+' метрик';
+    const st=document.getElementById('srcStat'); if(st) st.innerHTML='<b>Источник:</b> GitHub Actions → data.json ('+cnt+' метрик, обновление 2×/день). 🔴 красным — метрики из встроенного снимка (не пришли с бэкенда).';
+  }catch(e){
+    if(note) note.textContent='⚠️ бэкенд недоступен — показан встроенный снимок'; hasRefreshed=true; render();
+  }
+}
+
+async function refreshLive(){
+  const note=document.getElementById('liveNote'); if(note) note.textContent='⟳ обновляю данные…';
+  const log=[];
+  // CoinGecko: цена/ATH/доминация
+  try{
+    const d=await jget('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin&price_change_percentage=30d');
+    if(d&&d[0]){ RAW.price={v:d[0].current_price,src:'CoinGecko',live:true};
+      if(d[0].ath) RAW.ath={v:d[0].ath,src:'CoinGecko',live:true};
+      if(d[0].price_change_percentage_30d_in_currency!=null) RAW.mom30={v:d[0].price_change_percentage_30d_in_currency,src:'CoinGecko',live:true};
+      log.push('CoinGecko цена ✓'); }
+  }catch(e){ log.push('CoinGecko цена ✕'); }
+  // CoinGecko история → MA/RSI
+  try{
+    const mc=await jget('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily');
+    const closes=mc.prices.map(p=>p[1]);
+    const s50=sma(closes,50),s200=sma(closes,200),s140=sma(closes,140),s111=sma(closes,111),s350=sma(closes,350),r=rsiCalc(closes,14);
+    if(s50)RAW.sma50={v:s50,src:'CoinGecko',live:true};
+    if(s200)RAW.sma200={v:s200,src:'CoinGecko',live:true};
+    if(s140)RAW.sma20w={v:s140,src:'CoinGecko',live:true};
+    if(s111)RAW.sma111={v:s111,src:'CoinGecko',live:true};
+    if(s350)RAW.sma350={v:s350,src:'CoinGecko',live:true};
+    if(r){RAW.rsiPrev={v:RAW.rsi.v,src:'CoinGecko'};RAW.rsi={v:r,src:'CoinGecko',live:true};}
+    log.push('CoinGecko история ✓');
+  }catch(e){ log.push('CoinGecko история ✕'); }
+  // Fear & Greed
+  try{ const f=await jget('https://api.alternative.me/fng/?limit=1');
+    if(f&&f.data&&f.data[0]){ RAW.fng={v:+f.data[0].value,src:'alternative.me',live:true}; log.push('F&G ✓'); }
+  }catch(e){ log.push('F&G ✕'); }
+  // bitcoin-data.com on-chain
+  const bd=[['mvrv-zscore','mvrvZ','mvrvZscore'],['sopr','sopr','sopr'],['nupl','nupl','nupl'],
+    ['puell-multiple','puell','puellMultiple'],['hodl-bank','hodlBank','hodlBank'],
+    ['realized-price','realized','realizedPrice'],['rhodl-ratio','rhodl','rhodlRatio'],
+    ['sth-realized-price','sthRealized','sthRealizedPrice'],['average-dormancy','dormancy','averageDormancy']];
+  let bdOk=0;
+  for(const [ep,key,fld] of bd){
+    try{ const d=await jgetP('https://bitcoin-data.com/v1/'+ep+'/last');
+      const v=parseFloat(d[fld]); if(!isNaN(v)){ RAW[key]={v,src:'bitcoin-data.com',live:true}; bdOk++; } }
+    catch(e){ /* CORS/недоступно — оставляем снимок */ }
+  }
+  log.push('bitcoin-data.com: '+bdOk+'/'+bd.length+(bdOk?' ✓ (через прокси)':' ✕ (CORS + все прокси не прошли — данные из снимка)'));
+  // DefiLlama: суммарный supply стейблкоинов
+  try{ const sc=await jget('https://stablecoins.llama.fi/stablecoinchains');
+    if(Array.isArray(sc)){ let tot=0; sc.forEach(c=>{ const u=c.totalCirculatingUSD&&c.totalCirculatingUSD.peggedUSD; if(u) tot+=u; });
+      if(tot>0){ RAW.stablecoin={v:tot,src:'DefiLlama',live:true}; log.push('stablecoins ✓'); } }
+  }catch(e){ log.push('stablecoins ✕'); }
+  // Deribit: funding, open interest, DVOL (CORS-открыт)
+  try{ const t=await jget('https://www.deribit.com/api/v2/public/ticker?instrument_name=BTC-PERPETUAL');
+    if(t&&t.result){ if(t.result.funding_8h!=null) RAW.funding={v:t.result.funding_8h*100,src:'Deribit',live:true};
+      if(t.result.index_price!=null) RAW.deribitIndex={v:t.result.index_price,src:'Deribit',live:true};
+      if(t.result.open_interest!=null) RAW.oiUsd={v:t.result.open_interest,src:'Deribit перп',live:true}; log.push('Deribit ticker ✓'); }
+  }catch(e){ log.push('Deribit ticker ✕'); }
+  // Coinbase spot (для Coinbase premium)
+  try{ const c=await jget('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+    if(c&&c.data&&c.data.amount){ RAW.cbPrice={v:parseFloat(c.data.amount),src:'Coinbase',live:true}; log.push('Coinbase ✓'); } }
+  catch(e){ log.push('Coinbase ✕'); }
+  try{ const end=Date.now(), start=end-7*864e5;
+    const d=await jget('https://www.deribit.com/api/v2/public/get_volatility_index_data?currency=BTC&start_timestamp='+start+'&end_timestamp='+end+'&resolution=43200');
+    if(d&&d.result&&d.result.data&&d.result.data.length){ RAW.dvol={v:d.result.data[d.result.data.length-1][4],src:'Deribit (DVOL)',live:true}; log.push('DVOL ✓'); }
+  }catch(e){ log.push('DVOL ✕'); }
+
+  hasRefreshed=true;
+  render();
+  const now=new Date();
+  document.getElementById('asof').textContent='обновлено: '+now.toLocaleString('ru-RU');
+  if(note) note.textContent='⟳ обновлено '+now.toLocaleTimeString('ru-RU').slice(0,5);
+  const st=document.getElementById('srcStat'); if(st) st.innerHTML='<b>Живое обновление '+now.toLocaleTimeString('ru-RU').slice(0,5)+':</b> '+log.join(' · ')+'. 🔴 красным — метрики из снимка (не обновились вживую).';
+}
+function resetSnapshot(){ for(const k in SNAP) RAW[k]={...SNAP[k]};
+  document.getElementById('asof').textContent='снимок данных: '+SNAP.price.date; render(); }
+
+/* футер */
+document.getElementById('footNote').innerHTML=
+  'BTC Bottom &amp; Reversal Dashboard · снимок '+SNAP.price.date+' · источники: FMP, bitcoin-data.com (BGeometrics), alternative.me, CoinGecko, Binance/Deribit, DefiLlama. '+
+  'Инструмент для анализа, не финансовая рекомендация. Дно и развороты подтверждаются совпадением многих сигналов, а не одной метрикой.';
+
+function setupTips(){
+  const tip=document.getElementById('tip'); if(!tip) return;
+  document.addEventListener('mouseover',e=>{const t=e.target.closest('.mname'); if(t&&t.dataset.why){ tip.textContent=t.dataset.why; tip.style.display='block'; }});
+  document.addEventListener('mousemove',e=>{ if(tip.style.display!=='block')return; let x=e.clientX+16,y=e.clientY+18; if(x+372>innerWidth)x=e.clientX-372; if(y+190>innerHeight)y=Math.max(8,e.clientY-200); tip.style.left=x+'px'; tip.style.top=y+'px'; });
+  document.addEventListener('mouseout',e=>{const t=e.target.closest('.mname'); if(t) tip.style.display='none'; });
+}
+renderMethodology();
+render();
+setupTips();
+updatePctNote();
+loadBackend();
+</script>
+</body>
+</html>
