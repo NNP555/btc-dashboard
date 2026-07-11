@@ -103,9 +103,10 @@ const BD = {
   // ротируемые (реже, чтобы уложиться в лимит):
   'realized-price': 'realized', 'sth-realized-price': 'sthRealized', 'average-dormancy': 'dormancy',
   'lth-sopr': 'lthSopr', 'sth-sopr': 'sthSopr', 'reserve-risk': 'reserveRiskPub',
+  'lth-mvrv': 'lthMvrv', 'sth-mvrv': 'sthMvrv', 'nupl-lth': 'nuplLth', 'nupl-sth': 'nuplSth',
 };
 const BD_CORE = ['mvrv-zscore', 'nupl', 'sopr', 'puell-multiple', 'rhodl-ratio', 'hodl-bank'];
-const BD_ROTATE = ['realized-price', 'sth-realized-price', 'average-dormancy', 'lth-sopr', 'sth-sopr', 'reserve-risk'];
+const BD_ROTATE = ['realized-price', 'sth-realized-price', 'average-dormancy', 'lth-sopr', 'sth-sopr', 'reserve-risk', 'lth-mvrv', 'sth-mvrv', 'nupl-lth', 'nupl-sth'];
 
 function bdVal(obj) {
   const date = obj.d || obj.theDate || TODAY;
