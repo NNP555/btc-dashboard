@@ -107,7 +107,9 @@ const BD = {
   'lth-mvrv': 'lthMvrv', 'sth-mvrv': 'sthMvrv', 'nupl-lth': 'nuplLth', 'nupl-sth': 'nuplSth',
 };
 const BD_CORE = ['mvrv-zscore', 'nupl', 'sopr', 'puell-multiple', 'rhodl-ratio', 'hodl-bank'];
-const BD_ROTATE = ['lth-sopr', 'nupl-lth', 'sth-sopr', 'nupl-sth', 'lth-mvrv', 'sth-mvrv', 'sth-realized-price', 'average-dormancy', 'realized-price', 'reserve-risk'];
+// Фаза D: приоритет КОГОРТАМ. 8 когорт впереди, realized-price — в хвост.
+// reserve-risk убран из ротации: reserveRisk считаем сами (= price / HODL Bank), а reserveRiskPub нигде не используется.
+const BD_ROTATE = ['lth-sopr', 'nupl-lth', 'sth-sopr', 'nupl-sth', 'lth-mvrv', 'sth-mvrv', 'sth-realized-price', 'average-dormancy', 'realized-price'];
 
 function bdVal(obj) {
   const date = obj.d || obj.theDate || TODAY;
@@ -129,10 +131,16 @@ async function bitcoinData(slugs) {
     await sleep(1500);                                   // мягко к rate-limit
   }
 }
-// выбрать ротируемые по «стальности» (самые старые prev-даты вперёд)
+// Выбор ротируемых. Приоритет: сначала слаги, которые ЕЩЁ НИ РАЗУ не приходили
+// (в порядке BD_ROTATE — когорты впереди), затем самые «стальные» из уже имеющихся.
+// Так все 8 когорт гарантированно получат первое значение за первые ~8 прогонов (≈4 дня),
+// прежде чем realized-price начнёт заново обновляться.
 function pickRotating(n) {
+  const has = slug => { const p = prevM[BD[slug]]; return !!(p && p.d != null); };
   const age = slug => { const p = prevM[BD[slug]]; return p && p.d ? (Date.now() - new Date(p.d)) : 9e15; };
-  return BD_ROTATE.slice().sort((a, b) => age(b) - age(a)).slice(0, n);
+  const missing = BD_ROTATE.filter(s => !has(s));                        // ещё ни разу не пришли
+  const present = BD_ROTATE.filter(has).sort((a, b) => age(b) - age(a)); // старые вперёд
+  return [...missing, ...present].slice(0, n);
 }
 
 // ---------- Deribit (funding, OI, index, DVOL) ----------
