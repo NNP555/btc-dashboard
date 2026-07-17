@@ -27,7 +27,7 @@ const OUT = path.join(__dirname, 'data.json');
 const TODAY = new Date().toISOString().slice(0, 10);
 const HIST_CAP = 400;                 // сколько точек истории держать на метрику
 const ANOMALY = 0.5;                  // >50% скачок к прошлому значению = аномалия
-const VOLATILE = new Set(['price', 'etfFlow', 'funding', 'cbPrice', 'deribitIndex', 'oiUsd', 'dvol']); // рыночные метрики законно скачут — отсечку аномалий к ним не применяем
+const VOLATILE = new Set(['price', 'etfFlow', 'funding', 'cbPrice', 'deribitIndex', 'oiUsd', 'dvol', 'skew']); // рыночные метрики законно скачут (skew может менять знак) — отсечку аномалий к ним не применяем
 const BD_BUDGET = 7;                  // макс. запросов к bitcoin-data за прогон (лимит 8/час)
 
 // ---------- утилиты ----------
@@ -162,6 +162,61 @@ async function deribit() {
   } catch (e) { log('Deribit DVOL ✕', e.message); }
 }
 
+// ---------- 25Δ option skew (Deribit book summary → Блэк-76) ----------
+// >0 = коллы дороже путов (жадность/вершина); <0 = путы дороже (страх/дно). Единицы — vol points.
+function normCdf(x) {                                   // Abramowitz–Stegun 7.1.26
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const d = 0.3989422804014327 * Math.exp(-x * x / 2);
+  const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return x >= 0 ? 1 - p : p;
+}
+const SKEW_MONTHS = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+function parseOptName(name) {                            // BTC-25JUL25-120000-C
+  const m = /^BTC-(\d{1,2})([A-Z]{3})(\d{2})-(\d+)-([CP])$/.exec(name);
+  if (!m || SKEW_MONTHS[m[2]] === undefined) return null;
+  return { exp: Date.UTC(2000 + +m[3], SKEW_MONTHS[m[2]], +m[1], 8, 0, 0), strike: +m[4], cp: m[5] }; // экспирация 08:00 UTC
+}
+function ivAtDelta(pts, target) {                        // интерполяция IV по дельте; null если 25Δ вне диапазона страйков
+  const arr = pts.slice().sort((a, b) => a.d - b.d);
+  if (arr.length < 2 || target < arr[0].d || target > arr[arr.length - 1].d) return null;
+  for (let i = 0; i < arr.length - 1; i++) {
+    const a = arr[i], b = arr[i + 1];
+    if (target >= a.d && target <= b.d) { const w = (b.d - a.d) ? (target - a.d) / (b.d - a.d) : 0; return a.iv + w * (b.iv - a.iv); }
+  }
+  return null;
+}
+async function deribitSkew() {
+  try {
+    const j = await jget('https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency=BTC&kind=option', { timeout: 20000 });
+    const rows = (j && j.result) || [];
+    const now = Date.now();
+    const byExp = new Map();                             // экспирация -> [{strike,cp,iv,F,T}]
+    for (const r of rows) {
+      const p = parseOptName(r.instrument_name); if (!p) continue;
+      const iv = r.mark_iv, F = r.underlying_price;      // mark_iv в процентах
+      if (iv == null || !isFinite(iv) || iv <= 0 || !F) continue;
+      const T = (p.exp - now) / (365 * 864e5); if (T <= 1 / 365) continue;   // отбросить <1 дня
+      if (!byExp.has(p.exp)) byExp.set(p.exp, []);
+      byExp.get(p.exp).push({ strike: p.strike, cp: p.cp, iv, F, T });
+    }
+    let best = null, bestD = 1e9;                        // цепочка, ближайшая к 30 дням
+    for (const [exp, arr] of byExp) { const days = (exp - now) / 864e5, d = Math.abs(days - 30); if (arr.length >= 6 && d < bestD) { bestD = d; best = { arr, days }; } }
+    if (!best) { log('Deribit skew ✕ нет подходящей цепочки'); if (prevM.skew) snap.metrics.skew = prevM.skew; return; }
+    const calls = [], puts = [];
+    for (const o of best.arr) {                          // Блэк-76 (r≈0): callΔ=N(d1), putΔ=N(d1)−1
+      const s = o.iv / 100, sq = s * Math.sqrt(o.T);
+      const d1 = (Math.log(o.F / o.strike) + 0.5 * s * s * o.T) / sq;
+      const dc = normCdf(d1);
+      (o.cp === 'C' ? calls : puts).push({ d: o.cp === 'C' ? dc : dc - 1, iv: o.iv });
+    }
+    const ivC25 = ivAtDelta(calls, 0.25), ivP25 = ivAtDelta(puts, -0.25);
+    if (ivC25 == null || ivP25 == null) { log('Deribit skew ✕ нет страйков у 25Δ'); if (prevM.skew) snap.metrics.skew = prevM.skew; return; }
+    const skew = +(ivC25 - ivP25).toFixed(2);
+    put('skew', skew, TODAY, `Deribit 25Δ (${Math.round(best.days)}д)`);
+    log('Deribit skew ✓', skew, 'vol pts @', Math.round(best.days), 'д (callIV25', ivC25.toFixed(1), '· putIV25', ivP25.toFixed(1), ')');
+  } catch (e) { log('Deribit skew ✕', e.message); if (prevM.skew) snap.metrics.skew = prevM.skew; }
+}
+
 // ---------- прочие бесплатные источники ----------
 async function others() {
   try { const c = await jget('https://api.coinbase.com/v2/prices/BTC-USD/spot'); if (c?.data?.amount) put('cbPrice', +c.data.amount, TODAY, 'Coinbase'); log('Coinbase ✓'); }
@@ -193,9 +248,9 @@ async function etfFlow() {
 
 // ---------- TODO (Фаза C, требуют ключа/расчёта) ----------
 // m2 — FRED (US+EZ+JP+UK) + Frankfurter (FX→USD), ключ FRED в Secrets.
-// us10y — FRED DGS10 / Stooq CSV.  dxy — Stooq CSV.  25d-skew — Deribit book_summary → Блэк-76.
+// us10y — FRED DGS10 / Stooq CSV.  dxy — Stooq CSV.  (25Δ-skew — реализован в deribitSkew выше.)
 function carryTodo() {
-  for (const k of ['etfFlow', 'm2', 'us10y', 'dxy']) if (!snap.metrics[k] && prevM[k]) snap.metrics[k] = prevM[k];
+  for (const k of ['etfFlow', 'm2', 'us10y', 'dxy', 'skew']) if (!snap.metrics[k] && prevM[k]) snap.metrics[k] = prevM[k];
 }
 
 // ---------- main ----------
@@ -208,6 +263,7 @@ function carryTodo() {
   // метрики bitcoin-data, которые не тянули в этот прогон — переносим из prev
   for (const slug of BD_ROTATE) { const k = BD[slug]; if (!snap.metrics[k] && prevM[k]) snap.metrics[k] = prevM[k]; }
   await deribit();
+  await deribitSkew();
   await others();
   await etfFlow();
   carryTodo();
