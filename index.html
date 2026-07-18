@@ -94,7 +94,7 @@ details[open]>summary::before{content:"▾ "}
     <div>
       <h1>₿ BTC Bottom &amp; Reversal Dashboard</h1>
       <div class="sub">Агрегированная оценка дна и вершины крипторынка + импульс разворота · только Bitcoin</div>
-      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.1.1</b> · Фаза D · сборка 2026-07-17</div>
+      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.0</b> · Фаза E (калибровка вершины) · сборка 2026-07-18</div>
     </div>
     <div style="text-align:right">
       <div class="price" id="priceBox">$61,024 <small>BTC</small></div>
@@ -358,14 +358,18 @@ const CATS = {
 const CLUSTER = {
   cb:{ ids:['mvrvZ','nupl'], wB:18, wT:16, name:'Cost-basis (realized value)' }
 };
-// ── Фаза D: САМОСТОЯТЕЛЬНАЯ модель ВЕРШИНЫ (НЕ зеркало дна) ─────────────
-// Свои веса вершины: Pi Cycle 10→5; funding поднят до 12; добавлены
-// LTH-SOPR / LTH-NUPL (распределение), относительный OI и 25Δ-skew;
-// drawdown/halving — только дно (в вершине не участвуют).
-const TOPW = { mvrvZ:8, mvrvRatio:0, nupl:8, reserveRisk:8, sopr:4, puell:5, sthPrice:6,
-  mayer:7, rsi:5, drawdown:0, bmsb:3, p50:2, fng:7, rhodl:9, halving:0, piCycle:5, twoYMA:6,
+// ── Фаза E: КАЛИБРОВКА ВЕРШИНЫ по бэктесту 2015→2026 (Checkonchain, фикс-A окно [t−4y,t−3м]) ──
+// Дневной бэктест 4 эпизодов + FP-скан. Отходы от экспертной базы (обоснованы данными ранговой таблицы):
+//  • STH-MVRV убран из носителей вершины (инвертирован: p98 на фейке 2019-06, p67 на реальной 2025);
+//  • LTH-NUPL ≡ LTH-MVRV (монотонный трансформ NUPL=1−1/MVRV) → суммарный вес одной метрики (4+4);
+//  • extension демонтирован (mayer 7→5, twoYMA 6→4, piCycle 5→4) — на вершине 2025 холодный (p53–62);
+//  • усилены дискриминаторы распределения LTH: LTH-SOPR 9→10, RHODL 9→10 (различают 2025 от фейка 2019).
+// Вывод бэктеста: 2017 / 2021-04 — blow-off (ветка A, композит 91–97); 2021-11 и 2025 —
+// распределительные, низкоамплитудные (композит 64–69), ловятся веткой B через positioning+flow (runtime).
+const TOPW = { mvrvZ:8, mvrvRatio:0, nupl:8, reserveRisk:8, sopr:4, puell:4, sthPrice:6,
+  mayer:5, rsi:5, drawdown:0, bmsb:3, p50:2, fng:7, rhodl:10, halving:0, piCycle:4, twoYMA:4,
   funding:12, dvol:2, oiLev:4, skew:6, us10y:0, dxy:0, etfFlow:10,
-  lthSopr:9, nuplLth:9, sthSopr:3, nuplSth:3, lthMvrv:5, sthMvrv:4, dormancy:6 };
+  lthSopr:10, nuplLth:4, sthSopr:3, nuplSth:3, lthMvrv:4, sthMvrv:0, dormancy:6 };
 // Принадлежность метрики: 'B' = только дно, 'T' = только вершина, иначе — обе.
 const TOPSIDE = { drawdown:'B', halving:'B',
   piCycle:'T', oiLev:'T', skew:'T',
@@ -790,6 +794,22 @@ function topBand(s){
   if(s>=20) return ['УМЕРЕННО','#7fbf7f'];
   return ['ДАЛЕКО ОТ ВЕРШИНЫ','var(--grn)'];
 }
+// Фаза E: двухветочный alarm вершины (калибровка Fable). Ветка A — blow-off (композит≥75).
+// Ветка B — распределительная вершина: композит≥60 И ≥2 подтверждающих семейств «горячие» (≥65).
+// Подтверждающие = positioning (funding/OI/skew) + flow (ETF) + behavior (LTH-распределение/dormancy):
+// именно они были горячими на низкоамплитудной вершине 2025 и НЕ растут на обычных разгонах бычки.
+function topBand2(T){
+  const s=T.score||0, fs=T.famScore||{};
+  const conf=['positioning','flow','behavior'];
+  const hot=conf.filter(f=>fs[f]!=null && fs[f]>=65);
+  if(s>=75) return ['🔴 BLOW-OFF / ЭЙФОРИЯ · ветка A','var(--red)','A'];
+  if(s>=60 && hot.length>=2) return ['🟠 РАСПРЕДЕЛИТЕЛЬНАЯ ВЕРШИНА · ветка B ('+hot.map(f=>FAMRU[f]).join('+')+')','var(--red)','B'];
+  if(s>=65) return ['ЗОНА ВЕРШИНЫ · эйфория','#f0703a',''];
+  if(s>=50) return ['ПЕРЕГРЕВ · дорого','var(--org)',''];
+  if(s>=35) return ['ПОВЫШЕННЫЙ РИСК','var(--yel)',''];
+  if(s>=20) return ['УМЕРЕННО','#7fbf7f',''];
+  return ['ДАЛЕКО ОТ ВЕРШИНЫ','var(--grn)',''];
+}
 
 function render(){
   const B=computeBottom(), Rv=computeReversal(), T=computeTop();
@@ -802,7 +822,7 @@ function render(){
   gauge(document.getElementById('gaugeBottom'),B.score);
   gauge(document.getElementById('gaugeRev'),Rv.score);
   gauge(document.getElementById('gaugeTop'),T.score,true);
-  const bb=bottomBand(B.score||0), rb=revBand(Rv.score||0), tb2=topBand(T.score||0);
+  const bb=bottomBand(B.score||0), rb=revBand(Rv.score||0), tb2=topBand2(T);
   document.getElementById('bottomVerdict').textContent=bb[0];
   document.getElementById('bottomVerdict').style.color=bb[1];
   document.getElementById('revVerdict').textContent=rb[0];
@@ -834,8 +854,12 @@ function render(){
   let verdict='';
   if(B.insufficient){
     verdict=`<b>НЕДОСТАТОЧНО ДАННЫХ.</b> Покрытие модели дна ниже 35% — балл скрыт. Обнови данные (лимит/лаг bitcoin-data).`;
+  } else if(tb2[2]==='A'){
+    verdict=`<b>🔴 BLOW-OFF / ЭЙФОРИЯ (${Math.round(T.score)}/100 · ветка A).</b> Классический перегрев поздней бычки — on-chain и ценовое растяжение экстремальны (как 2017 / апр-2021). Перегреты: ${hotTxt}. Агрессивно снижай риск; подтверждение слома — уход цены ниже 20-нед. MA ($${Math.round(RAW.sma20w.v).toLocaleString('en-US')}) и SOPR&lt;1.`;
+  } else if(tb2[2]==='B'){
+    verdict=`<b>🟠 РАСПРЕДЕЛИТЕЛЬНАЯ ВЕРШИНА (${Math.round(T.score)}/100 · ветка B).</b> Низкоамплитудная вершина типа <b>2025</b>: on-chain лишь «повышен» (не экстремум), но подтверждают ≥2 семейства деривативов/потоков — funding/OI/skew, ETF, LTH-распределение. Именно так выглядела вершина окт-2025; blow-off можно не дождаться — снижай риск по факту подтверждений.`;
   } else if(T.score!=null && T.score>=50){
-    verdict=`<b>ВЕРШИНА / РАСПРЕДЕЛЕНИЕ (${Math.round(T.score)}/100).</b> Перегреты: ${hotTxt}. Балл вершины считается с бóльшим весом деривативов/плеча и распределения. Снижай риск по мере роста признаков; подтверждение слома — уход цены ниже 20-нед. MA ($${Math.round(RAW.sma20w.v).toLocaleString('en-US')}) и SOPR&lt;1.`;
+    verdict=`<b>ВЕРШИНА / РАСПРЕДЕЛЕНИЕ (${Math.round(T.score)}/100).</b> Перегреты: ${hotTxt}. On-chain дорого, но подтверждений деривативов/потоков пока &lt;2 (не полный сигнал ветки B). Снижай риск по мере роста признаков; подтверждение слома — уход цены ниже 20-нед. MA ($${Math.round(RAW.sma20w.v).toLocaleString('en-US')}) и SOPR&lt;1.`;
   } else if(B.score>=65 && Rv.score<42){
     verdict=`Рынок <b>в зоне дна</b>: глубокая недооценка по on-chain (MVRV Z ${fmtNum(RAW.mvrvZ.v,2)}, Reserve Risk на минимумах), капитуляция по прибыли/убытку (NUPL ${fmtNum(RAW.nupl.v,3)}, SOPR ${fmtNum(RAW.sopr.v,3)}) и крайний страх (F&G ${Math.round(RAW.fng.v)}). Но <b>устойчивый разворот вверх пока НЕ подтверждён</b> — цена ниже 20-нед. MA ($${Math.round(RAW.sma20w.v).toLocaleString('en-US')}) и 50-дн. MA, SOPR всё ещё <1. `+
       `Сигналы к развороту, за которыми следить: возврат и закрепление цены выше <b>$${Math.round(RAW.sma20w.v).toLocaleString('en-US')}</b> (Bull Market Support Band), SOPR устойчиво >1, RSI выше 50.`;
