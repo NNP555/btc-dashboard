@@ -246,9 +246,25 @@ async function etfFlow() {
   } catch (e) { log('ETF Farside ✕', e.message); }
 }
 
-// ---------- TODO (Фаза C, требуют ключа/расчёта) ----------
-// m2 — FRED (US+EZ+JP+UK) + Frankfurter (FX→USD), ключ FRED в Secrets.
-// us10y — FRED DGS10 / Stooq CSV.  dxy — Stooq CSV.  (25Δ-skew — реализован в deribitSkew выше.)
+// ---------- FRED (keyless CSV, БЕЗ ключа): US10Y=DGS10, доллар=DTWEXBGS (Fed Broad), M2=M2SL ----------
+// fredgraph.csv отдаётся любому клиенту (в Node CORS не действует). Формат: «дата,значение», пропуск = «.».
+async function fredLast(id) {
+  const t = await (await fetch('https://fred.stlouisfed.org/graph/fredgraph.csv?id=' + id)).text();
+  const lines = t.trim().split('\n');
+  for (let i = lines.length - 1; i >= 1; i--) {
+    const p = lines[i].split(','); const v = parseFloat((p[1] || '').trim());
+    if (isFinite(v)) return { date: (p[0] || '').trim(), val: v };
+  }
+  return null;
+}
+async function fred() {
+  try { const y = await fredLast('DGS10');    if (y) put('us10y', y.val,       y.date, 'FRED DGS10'); }   catch (e) { log('FRED DGS10 ✕', e.message); }
+  try { const d = await fredLast('DTWEXBGS'); if (d) put('dxy',   d.val,       d.date, 'FRED Broad$'); }   catch (e) { log('FRED DTWEXBGS ✕', e.message); }
+  try { const m = await fredLast('M2SL');     if (m) put('m2',    m.val * 1e9, m.date, 'FRED M2SL'); }     catch (e) { log('FRED M2SL ✕', e.message); }
+  log('FRED ✓');
+}
+
+// ---------- carry-forward (если источник не ответил в этот прогон) ----------
 function carryTodo() {
   for (const k of ['etfFlow', 'm2', 'us10y', 'dxy', 'skew']) if (!snap.metrics[k] && prevM[k]) snap.metrics[k] = prevM[k];
 }
@@ -266,6 +282,7 @@ function carryTodo() {
   await deribitSkew();
   await others();
   await etfFlow();
+  await fred();
   carryTodo();
 
   // Reserve Risk (свежий) = цена / HODL Bank — если оба есть

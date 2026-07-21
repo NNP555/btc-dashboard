@@ -76,6 +76,7 @@ details[open]>summary::before{content:"▾ "}
 .spacer{flex:1}
 .mname{cursor:help;border-bottom:1px dotted var(--mut)}
 .mname .ic{font-size:10px;color:var(--mut2);margin-left:1px}
+.clink{text-decoration:none;font-size:11px;opacity:.5;margin-left:3px}.clink:hover{opacity:1}
 #tip{position:fixed;display:none;max-width:360px;background:#0f1426;border:1px solid #2b3355;color:#e2e8f6;padding:10px 13px;border-radius:9px;font-size:12.5px;line-height:1.5;box-shadow:0 10px 30px rgba(0,0,0,.55);z-index:9999;pointer-events:none}
 #tip b{color:#fff}
 .tabbar{display:flex;gap:6px;margin:14px 0 0;flex-wrap:wrap}
@@ -94,7 +95,7 @@ details[open]>summary::before{content:"▾ "}
     <div>
       <h1>₿ BTC Bottom &amp; Reversal Dashboard</h1>
       <div class="sub">Агрегированная оценка дна и вершины крипторынка + импульс разворота · только Bitcoin</div>
-      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.3</b> · Фаза E · роадмап актуализирован · сборка 2026-07-20</div>
+      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.4</b> · живой макро (FRED) + ссылки на графики 📈 · сборка 2026-07-20</div>
     </div>
     <div style="text-align:right">
       <div class="price" id="priceBox">$61,024 <small>BTC</small></div>
@@ -409,6 +410,40 @@ const TOPPTS = {
   dormancy:[[2,15],[5,35],[9,55],[16,74],[30,90],[60,100]]
 };
 
+// Ссылки на «родной» график каждой метрики (открываются в новой вкладке).
+const LINKS = {
+  mvrvZ:'https://www.lookintobitcoin.com/charts/mvrv-zscore/',
+  mvrvRatio:'https://www.lookintobitcoin.com/charts/mvrv-zscore/',
+  reserveRisk:'https://www.lookintobitcoin.com/charts/reserve-risk/',
+  nupl:'https://www.lookintobitcoin.com/charts/relative-unrealized-profit--loss/',
+  puell:'https://www.lookintobitcoin.com/charts/puell-multiple/',
+  mayer:'https://www.lookintobitcoin.com/charts/mayer-multiple/',
+  rhodl:'https://www.lookintobitcoin.com/charts/rhodl-ratio/',
+  piCycle:'https://www.lookintobitcoin.com/charts/pi-cycle-top-indicator/',
+  twoYMA:'https://www.lookintobitcoin.com/charts/bitcoin-investor-tool/',
+  rsi:'https://www.tradingview.com/symbols/BTCUSD/',
+  p50:'https://www.tradingview.com/symbols/BTCUSD/',
+  drawdown:'https://www.tradingview.com/symbols/BTCUSD/',
+  bmsb:'https://www.tradingview.com/symbols/BTCUSD/',
+  sthPrice:'https://charts-cdn.checkonchain.com/btconchain/unrealised/mvrv_sth/mvrv_sth_light.html',
+  sthMvrv:'https://charts-cdn.checkonchain.com/btconchain/unrealised/mvrv_sth/mvrv_sth_light.html',
+  lthSopr:'https://charts-cdn.checkonchain.com/btconchain/realised/lthsopr_indicator/lthsopr_indicator_light.html',
+  lthMvrv:'https://charts-cdn.checkonchain.com/btconchain/realised/lthsopr_indicator/lthsopr_indicator_light.html',
+  nuplLth:'https://charts-cdn.checkonchain.com/btconchain/unrealised/nupl_bycohort/nupl_bycohort_light.html',
+  nuplSth:'https://charts-cdn.checkonchain.com/btconchain/unrealised/nupl_bycohort/nupl_bycohort_light.html',
+  fng:'https://alternative.me/crypto/fear-and-greed-index/',
+  funding:'https://www.coinglass.com/FundingRate',
+  oi:'https://www.coinglass.com/BitcoinOpenInterest',
+  oiLev:'https://www.coinglass.com/BitcoinOpenInterest',
+  dvol:'https://metrics.deribit.com/',
+  skew:'https://metrics.deribit.com/',
+  us10y:'https://fred.stlouisfed.org/series/DGS10',
+  dxy:'https://fred.stlouisfed.org/series/DTWEXBGS',
+  m2:'https://fred.stlouisfed.org/series/M2SL',
+  stablecoin:'https://defillama.com/stablecoins',
+  etfFlow:'https://farside.co.uk/btc/'
+};
+function linkIcon(id){ const u=LINKS[id]; return u?` <a href="${u}" target="_blank" rel="noopener noreferrer" class="clink" title="открыть график в новой вкладке">📈</a>`:''; }
 const METRICS = [
   // --- ON-CHAIN ОЦЕНКА ---
   {id:'mvrvZ',cat:'val',name:'MVRV Z-Score',w:9,unit:'',
@@ -519,10 +554,10 @@ const METRICS = [
     get:()=>RAW.stablecoin.v, fmt:v=>v==null?'—':'$'+(v/1e9).toFixed(0)+'B', band:'контекст: рост = приток крипто-ликвидности («топливо»)',
     pts:[[0,50]],
     why:'Суммарная капитализация стейблкоинов (DefiLlama, live). Рост = ликвидность/«топливо» для покупок прибывает, падение = уходит. Сигнал в ТЕМПЕ роста, а не в уровне — показан как контекст.'},
-  {id:'m2',cat:'macro',name:'Global M2 · контекст',w:0,unit:'',
-    get:()=>RAW.m2.v, fmt:v=>v==null?'—':'$'+(v/1e12).toFixed(0)+'T', band:'контекст: рост Global M2 = попутный ветер ликвидности',
+  {id:'m2',cat:'macro',name:'US M2 · контекст',w:0,unit:'',
+    get:()=>RAW.m2.v, fmt:v=>v==null?'—':'$'+(v/1e12).toFixed(1)+'T', band:'контекст: рост M2 = попутный ветер ликвидности',
     pts:[[0,50]],
-    why:'Глобальная денежная масса M2 (США+ЕЗ+Китай+Япония+UK в USD). BTC коррелирует именно с ГЛОБАЛЬНОЙ ликвидностью (лаг ~10–12 недель), а не только с US M2 — поэтому Global. Медленная, показана как контекст; live — через агрегатор/ключ FRED.'},
+    why:'Денежная масса M2 США (FRED M2SL, live, месячная, ~$22T). BTC коррелирует с ликвидностью с лагом ~10–12 нед. Идеал — глобальная M2, но она требует агрегации; US M2 — доминирующий бесплатный прокси. Контекст, вес 0.'},
 
   {id:'cbPremium',cat:'macro',name:'Coinbase premium (%)',w:2,unit:'%',srcTxt:'Coinbase − Deribit index',
     get:()=> (RAW.cbPrice.v&&RAW.deribitIndex.v)? (RAW.cbPrice.v-RAW.deribitIndex.v)/RAW.deribitIndex.v*100 : null, fmt:v=>v==null?'—':(v>0?'+':'')+fmtNum(v,2)+'%', band:'>0 = спрос США (спот) · <0 = продажи США',
@@ -532,10 +567,10 @@ const METRICS = [
     get:()=>RAW.us10y.v, fmt:v=>fmtPct(v,2), band:'снижение ставок · попутный ветер',
     pts:[[2.5,82],[3.5,62],[4.0,54],[4.5,45],[5.0,32],[5.5,20]],
     why:'Высокие ставки — встречный ветер для рисковых активов. Разворот ставок вниз обычно поддерживает крипто. Малый вес.'},
-  {id:'dxy',cat:'macro',name:'Индекс доллара DXY',w:1.5,unit:'',
-    get:()=>RAW.dxy.v, fmt:v=>v==null?'—':fmtNum(v,1), band:'снижение DXY · попутный ветер',
-    pts:[[95,80],[100,58],[104,46],[108,30],[112,18]],
-    why:'Сильный доллар давит на BTC. Впиши текущий уровень вручную или подтяни живьём. Малый вес.'},
+  {id:'dxy',cat:'macro',name:'Индекс доллара (Fed Broad)',w:1.5,unit:'',
+    get:()=>RAW.dxy.v, fmt:v=>v==null?'—':fmtNum(v,1), band:'снижение = попутный ветер (шкала ≈112–128)',
+    pts:[[112,80],[116,62],[120,50],[124,36],[128,20]],
+    why:'Индекс доллара. Живьём — Nominal Broad Dollar Index ФРС (FRED DTWEXBGS, шкала ~120, НЕ ICE DXY ~100). Сильный доллар давит на BTC. Малый вес.'},
 
   // --- ДЕРИВАТИВЫ (только вершина) · Фаза D ---
   {id:'skew',cat:'der',name:'25Δ option skew (Deribit) · ожидается',w:0,unit:'',
@@ -915,7 +950,7 @@ function render(){
       const tr=document.createElement('tr');
       if((hasRefreshed && !live) || isStale(m)) tr.style.boxShadow='inset 4px 0 0 #ff5a5a';
       tr.innerHTML=`
-        <td><b class="mname" data-why="${(m.why||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${m.name} <span class="ic">ⓘ</span></b>${m.cluster?' <span class="tag" style="border-color:#7c5cff;color:#b7a4ff">🔗 cost-basis</span>':''}</td>
+        <td><b class="mname" data-why="${(m.why||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${m.name} <span class="ic">ⓘ</span></b>${linkIcon(m.id)}${m.cluster?' <span class="tag" style="border-color:#7c5cff;color:#b7a4ff">🔗 cost-basis</span>':''}</td>
         <td class="num">${
           editable
           ? `<input class="val" type="number" step="any" value="${raw==null?'':(+raw).toPrecision(6).replace(/\.?0+$/,'')}" data-k="${m.id}">`
@@ -974,7 +1009,7 @@ function renderTopTable(T){
     const st = s==null?'нет данных': s>=80?'сильная вершина': s>=60?'зона вершины': s>=40?'перегрев':'спокойно';
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td><b class="mname" data-why="${(m.why||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${m.name} <span class="ic">ⓘ</span></b></td>
+      <td><b class="mname" data-why="${(m.why||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${m.name} <span class="ic">ⓘ</span></b>${linkIcon(m.id)}</td>
       <td class="num">${m.fmt(raw)}</td>
       <td style="color:var(--mut);font-size:12px">${m.band}</td>
       <td style="font-size:12px;color:var(--mut)">${sideTxt}</td>
@@ -993,7 +1028,7 @@ function renderCohorts(){
     const has=RAW[id]&&RAW[id].v!=null; const raw=m.get(); const s=has?effScore(m,'T'):null; const col=has?scoreColorInv(s):'var(--mut2)';
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td><b class="mname" data-why="${(m.why||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${m.name} <span class="ic">ⓘ</span></b></td>
+      <td><b class="mname" data-why="${(m.why||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${m.name} <span class="ic">ⓘ</span></b>${linkIcon(m.id)}</td>
       <td class="num">${has?m.fmt(raw):'—'}</td>
       <td style="color:var(--mut);font-size:12px">${m.band}</td>
       <td class="num">${s==null?'—':`<span class="scorechip" style="background:${col};color:#08110c">${Math.round(s)}</span>`}</td>
