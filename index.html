@@ -95,7 +95,7 @@ details[open]>summary::before{content:"▾ "}
     <div>
       <h1>₿ BTC Bottom &amp; Reversal Dashboard</h1>
       <div class="sub">Агрегированная оценка дна и вершины крипторынка + импульс разворота · только Bitcoin</div>
-      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.5</b> · живой макро + ссылки 📈 на все метрики · сборка 2026-07-21</div>
+      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.6</b> · роадмап актуализирован (макро подключён) · сборка 2026-07-21</div>
     </div>
     <div style="text-align:right">
       <div class="price" id="priceBox">$61,024 <small>BTC</small></div>
@@ -229,11 +229,12 @@ details[open]>summary::before{content:"▾ "}
         <li><b>Когортные SOPR / NUPL / MVRV (LTH &amp; STH)</b> — LTH-SOPR, STH-SOPR, LTH-NUPL, STH-NUPL, LTH-MVRV, STH-MVRV. Распределение LTH — ведущий сигнал вершины (ветка B), капитуляция STH — сигнал дна. <i>bitcoin-data.com (ротация по 1/прогон) + история Checkonchain для калибровки 2015–2026.</i></li>
         <li><b>Options 25Δ skew (Deribit)</b> — перекос IV пут/колл через Блэк-76 (парсинг цепочки + интерполяция к 25-дельте). В семействе позиционирования — драйвер ветки B вершины.</li>
         <li><b>RHODL Ratio · Reserve Risk · Dormancy</b> — вызревание монет и «уверенность» держателей; откалиброваны по бэктесту (rhodl — дискриминатор вершины vs фейков).</li>
+        <li><b>Макро вживую: US10Y · DXY (Fed Broad) · US M2</b> — FRED keyless CSV (DGS10 / DTWEXBGS / M2SL), без ключа. Контекст ликвидности; макро-семейство = 0 в модели вершины, ~8% в модели дна.</li>
       </ul>
 
-      <p style="margin:12px 0 4px"><b style="color:var(--grn)">● Бесплатно — требует доработки источника</b></p>
+      <p style="margin:12px 0 4px"><b style="color:var(--grn)">● Бесплатно — на оценке</b> <span class="sub" style="font-size:11px">(упирается в дневной лимит bitcoin-data.com)</span></p>
       <ul style="font-size:13px;line-height:1.5">
-        <li><b>Макро вживую: US10Y / DXY / Global M2</b> — сейчас на встроенном снимке (бейдж «снимок»), живой фетч не подключён. US10Y можно бесплатно (Казначейство США / Stooq CSV); DXY проприетарный (ICE) — только аппроксимация через корзину FX; M2 — FRED (нужен бесплатный ключ в Secrets). <i>Низкий приоритет: макро-семейство = 0 в модели вершины и лишь ~8% в модели дна.</i> Резерв веса: 1–3%.</li>
+        <li><b>HODL Waves · LTH/STH Supply · когортная Realized Price</b> — доля предложения по возрасту и себестоимость когорт. Часть доступна бесплатно у bitcoin-data.com (BGeometrics), но их free-лимит ~15 запросов/день уже почти выбран (метрики ротируются раз в ~4–5 дней). Добавление требует расширения ротации или платного ключа. Резерв веса: 2–4%.</li>
       </ul>
 
       <p style="margin:12px 0 4px"><b style="color:var(--org)">● Платно — в облачной версии</b> <span class="sub" style="font-size:11px">(Glassnode / CryptoQuant)</span></p>
