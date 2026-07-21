@@ -95,7 +95,7 @@ details[open]>summary::before{content:"▾ "}
     <div>
       <h1>₿ BTC Bottom &amp; Reversal Dashboard</h1>
       <div class="sub">Агрегированная оценка дна и вершины крипторынка + импульс разворота · только Bitcoin</div>
-      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.4</b> · живой макро (FRED) + ссылки на графики 📈 · сборка 2026-07-20</div>
+      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.5</b> · живой макро + ссылки 📈 на все метрики · сборка 2026-07-21</div>
     </div>
     <div style="text-align:right">
       <div class="price" id="priceBox">$61,024 <small>BTC</small></div>
@@ -441,7 +441,11 @@ const LINKS = {
   dxy:'https://fred.stlouisfed.org/series/DTWEXBGS',
   m2:'https://fred.stlouisfed.org/series/M2SL',
   stablecoin:'https://defillama.com/stablecoins',
-  etfFlow:'https://farside.co.uk/btc/'
+  etfFlow:'https://farside.co.uk/btc/',
+  sopr:'https://charts-cdn.checkonchain.com/btconchain/realised/sopr/sopr_light.html',
+  sthSopr:'https://charts-cdn.checkonchain.com/btconchain/realised/sthsopr_indicator/sthsopr_indicator_light.html',
+  dormancy:'https://charts-cdn.checkonchain.com/btconchain/lifespan/cdd/cdd_light.html',
+  halving:'https://www.bitbo.io/halving/'
 };
 function linkIcon(id){ const u=LINKS[id]; return u?` <a href="${u}" target="_blank" rel="noopener noreferrer" class="clink" title="открыть график в новой вкладке">📈</a>`:''; }
 const METRICS = [
