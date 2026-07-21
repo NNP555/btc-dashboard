@@ -95,7 +95,7 @@ details[open]>summary::before{content:"▾ "}
     <div>
       <h1>₿ BTC Bottom &amp; Reversal Dashboard</h1>
       <div class="sub">Агрегированная оценка дна и вершины крипторынка + импульс разворота · только Bitcoin</div>
-      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.6</b> · роадмап актуализирован (макро подключён) · сборка 2026-07-21</div>
+      <div class="sub" style="font-size:11px;color:#6f7d99;margin-top:2px">версия <b>v1.2.7</b> · +LTH NPC (носитель ветки B, Checkonchain) · сборка 2026-07-21</div>
     </div>
     <div style="text-align:right">
       <div class="price" id="priceBox">$61,024 <small>BTC</small></div>
@@ -230,17 +230,18 @@ details[open]>summary::before{content:"▾ "}
         <li><b>Options 25Δ skew (Deribit)</b> — перекос IV пут/колл через Блэк-76 (парсинг цепочки + интерполяция к 25-дельте). В семействе позиционирования — драйвер ветки B вершины.</li>
         <li><b>RHODL Ratio · Reserve Risk · Dormancy</b> — вызревание монет и «уверенность» держателей; откалиброваны по бэктесту (rhodl — дискриминатор вершины vs фейков).</li>
         <li><b>Макро вживую: US10Y · DXY (Fed Broad) · US M2</b> — FRED keyless CSV (DGS10 / DTWEXBGS / M2SL), без ключа. Контекст ликвидности; макро-семейство = 0 в модели вершины, ~8% в модели дна.</li>
+        <li><b>LTH Net Position Change (30д)</b> — сток распределения долгосрочных держателей (Checkonchain, ноль нагрузки на bitcoin-data лимит). Единственная ортогональная свободная метрика (сверх когортных SOPR/MVRV): носитель ветки B вершины, top-only, умеренный вес (сырой NPC подвержен артефакту 155 дней на дне).</li>
       </ul>
 
-      <p style="margin:12px 0 4px"><b style="color:var(--grn)">● Бесплатно — на оценке</b> <span class="sub" style="font-size:11px">(упирается в дневной лимит bitcoin-data.com)</span></p>
+      <p style="margin:12px 0 4px"><b style="color:var(--grn)">● Бесплатно — проанализировано, не добавляем</b> <span class="sub" style="font-size:11px">(дубли уже подключённого)</span></p>
       <ul style="font-size:13px;line-height:1.5">
-        <li><b>HODL Waves · LTH/STH Supply · когортная Realized Price</b> — доля предложения по возрасту и себестоимость когорт. Часть доступна бесплатно у bitcoin-data.com (BGeometrics), но их free-лимит ~15 запросов/день уже почти выбран (метрики ротируются раз в ~4–5 дней). Добавление требует расширения ротации или платного ключа. Резерв веса: 2–4%.</li>
+        <li><b>HODL Waves · когортная Realized Price</b> — по анализу дублируют уже подключённое: HODL Waves ≈ RHODL, когортная realized price ≈ когортный MVRV (по построению). Ортогональной ценности не добавляют. Единственная ортогональная свободная метрика — LTH NPC — уже подключена (см. выше).</li>
       </ul>
 
       <p style="margin:12px 0 4px"><b style="color:var(--org)">● Платно — в облачной версии</b> <span class="sub" style="font-size:11px">(Glassnode / CryptoQuant)</span></p>
       <ul style="font-size:13px;line-height:1.5">
-        <li><b>Entity-adjusted exchange netflows</b> — чистые потоки на биржи, очищенные от внутренних переводов самих бирж (самый чистый сигнал давления). Приток = продажи (→ вершина), отток = аккумуляция (→ дно). Резерв веса: 6–8%.</li>
-        <li><b>Whale netflows</b> — потоки кошельков-китов (&gt;1000 BTC) на биржи и обратно. Ранний сигнал крупных игроков. Резерв веса: 4%.</li>
+        <li><b>Exchange reserve — 30-дн. дельта</b> — устойчивый сигнал давления. По Fable: сырой дневной netflow = только контекст (артефакты консолидаций холодных кошельков), а в БАЛЛ идёт 30-дн. изменение резервов бирж. Платно: bitcoin-data Advanced (~$12) / Glassnode. Резерв веса: 6–8% — будущее семейство flow (порог «2 из» не трогать).</li>
+        <li><b>Whale-прокси (адресный, coins-addr-*)</b> — бесплатен у bitcoin-data, но ест дневной лимит. По Fable: в балл только в модели ДНА (вес 2–3, сглаженно); в вершине — контекст (в «китовые» полосы попадают кастодианы ETF). Кандидат при переходе на платный ключ.</li>
         <li><b>URPD (UTXO Realized Price Distribution)</b> — плотность себестоимости монет по ценовым уровням: где сосредоточен объём «застрявших» покупок → зоны поддержки/сопротивления. Контекст, вес 0.</li>
         <li><b>Полные HODL Waves / когортное RHODL</b> — доля предложения по возрасту монет. Вызревание молодых→старых = аккумуляция/дно; обратное = распределение/вершина. Резерв веса: 3%.</li>
         <li><b>LTH / STH Supply &amp; Realized Price</b> — абсолютное предложение и реализованная цена когорт как отдельные ряды (когортные MVRV / NUPL / SOPR уже подключены). Резерв веса: 2–4%.</li>
@@ -310,6 +311,7 @@ const SNAP = {
   funding:      {v:0.00004,  src:'Deribit',        date:'2026-07-06'},
   dvol:         {v:40.17,    src:'Deribit (DVOL)', date:'2026-07-06'},
   oiUsd:        {v:824483990,src:'Deribit перп',   date:'2026-07-06'},
+  lthNpc:       {v:174000,   src:'Checkonchain NPC 30д', date:'2026-07-19'},
   stablecoin:   {v:304000000000, src:'DefiLlama ≈', date:'2026-07-06'},
   m2:           {v:115000000000000, src:'≈ ручной (Global)', date:'2026-07-06'},
   etfFlow:      {v:null,     src:'ручной (Farside)', date:''},
@@ -377,12 +379,12 @@ const CLUSTER = {
 const TOPW = { mvrvZ:8, mvrvRatio:0, nupl:8, reserveRisk:8, sopr:4, puell:4, sthPrice:6,
   mayer:5, rsi:5, drawdown:0, bmsb:3, p50:2, fng:7, rhodl:10, halving:0, piCycle:4, twoYMA:4,
   funding:12, dvol:2, oiLev:4, skew:6, us10y:0, dxy:0, etfFlow:10,
-  lthSopr:10, nuplLth:4, sthSopr:3, nuplSth:3, lthMvrv:4, sthMvrv:0, dormancy:6 };
+  lthSopr:10, nuplLth:4, sthSopr:3, nuplSth:3, lthMvrv:4, sthMvrv:0, dormancy:6, lthNpc:5 };
 // Принадлежность метрики: 'B' = только дно, 'T' = только вершина, иначе — обе.
 const TOPSIDE = { drawdown:'B', halving:'B',
   piCycle:'T', oiLev:'T', skew:'T',
   lthSopr:'T', nuplLth:'T', lthMvrv:'T', dormancy:'T',
-  sthSopr:'both', nuplSth:'both', sthMvrv:'both' };
+  sthSopr:'both', nuplSth:'both', sthMvrv:'both', lthNpc:'T' };
 // Свои пороги ВЕРШИННОСТИ: value → topness 0..100 (100 = пик распределения).
 // Асимметричные метрики считаются НАПРЯМУЮ, а не как 100 − балл_дна.
 const TOPPTS = {
@@ -406,6 +408,7 @@ const TOPPTS = {
   nuplSth:[[0.25,15],[0.4,42],[0.5,62],[0.6,82],[0.7,96]],
   lthMvrv:[[2,10],[3.5,35],[5,58],[7,78],[10,94],[13,100]],
   sthMvrv:[[1.0,22],[1.1,48],[1.25,72],[1.4,88],[1.6,100]],
+  lthNpc:[[-400000,98],[-250000,90],[-150000,76],[-50000,58],[0,45],[100000,25],[200000,12],[350000,5]],
   oiLev:[[0,8],[30,30],[50,52],[70,74],[85,90],[100,100]],
   skew:[[-12,5],[-5,22],[0,45],[4,66],[8,84],[12,96],[16,100]],
   dormancy:[[2,15],[5,35],[9,55],[16,74],[30,90],[60,100]]
@@ -430,6 +433,7 @@ const LINKS = {
   sthMvrv:'https://charts-cdn.checkonchain.com/btconchain/unrealised/mvrv_sth/mvrv_sth_light.html',
   lthSopr:'https://charts-cdn.checkonchain.com/btconchain/realised/lthsopr_indicator/lthsopr_indicator_light.html',
   lthMvrv:'https://charts-cdn.checkonchain.com/btconchain/realised/lthsopr_indicator/lthsopr_indicator_light.html',
+  lthNpc:'https://charts-cdn.checkonchain.com/btconchain/supply/lthnetposchange_0/lthnetposchange_0_light.html',
   nuplLth:'https://charts-cdn.checkonchain.com/btconchain/unrealised/nupl_bycohort/nupl_bycohort_light.html',
   nuplSth:'https://charts-cdn.checkonchain.com/btconchain/unrealised/nupl_bycohort/nupl_bycohort_light.html',
   fng:'https://alternative.me/crypto/fear-and-greed-index/',
@@ -611,7 +615,12 @@ const METRICS = [
   {id:'sthMvrv',cat:'coh',name:'STH-MVRV (себестоимость краткосрочных)',w:3,unit:'',
     get:()=>RAW.sthMvrv?RAW.sthMvrv.v:null, fmt:v=>fmtNum(v,3), band:'< 1 = молодые в убытке (пивот/дно) · > 1.25 = перегрев',
     pts:[[0.8,90],[0.95,62],[1.0,50],[1.1,30],[1.25,12]],
-    why:'MVRV краткосрочных держателей. Ниже 1 — недавние покупатели в среднем в убытке (пивот бык/медведь, поддержка дна). Заметно выше 1 — перегрев.'}
+    why:'MVRV краткосрочных держателей. Ниже 1 — недавние покупатели в среднем в убытке (пивот бык/медведь, поддержка дна). Заметно выше 1 — перегрев.'},
+  {id:'lthNpc',cat:'coh',name:'LTH Net Position Change (30д)',w:0,unit:'',
+    get:()=>RAW.lthNpc?RAW.lthNpc.v:null, fmt:v=>v==null?'—':(v>=0?'+':'')+(v/1000).toFixed(0)+'k',
+    band:'отрицат. = LTH распределяют (вершина, ветка B) · положит. = аккумулируют',
+    pts:[[-800000,8],[-300000,20],[-100000,38],[0,52],[100000,70],[250000,88]],
+    why:'LTH Net Position Change (30 дней, Checkonchain): сколько BTC когорта долгосрочных держателей ОТДАЛА (−) или НАБРАЛА (+) за месяц. Ортогонален SOPR/MVRV (те про поведение и состояние, NPC — про сток предложения). Отрицательный = распределение — прямой измеритель ветки B вершины. ВНИМАНИЕ: сырой NPC подвержен артефакту 155 дней (уходит в минус и на капитуляциях дна), поэтому вес умеренный и метрика top-only — внутри семейства-носителя его bottom-выброс перевешивают cost-basis метрики. Источник: Checkonchain, ноль нагрузки на bitcoin-data лимит.'}
 ];
 
 /* ============================================================
@@ -697,7 +706,7 @@ const META={
   etfFlow:['flow','flow'], stablecoin:['flow','flow'], cbPremium:['flow','flow'],
   m2:['macro','macroM'], us10y:['macro','macroD'], dxy:['macro','macroD'],
   // Фаза D: когорты MVRV/NUPL — cost-basis (price); SOPR/dormancy — поведение; skew/OI — позиционные
-  nuplLth:['price','onchain'], nuplSth:['price','onchain'], lthMvrv:['price','onchain'], sthMvrv:['price','onchain'],
+  nuplLth:['price','onchain'], nuplSth:['price','onchain'], lthMvrv:['price','onchain'], sthMvrv:['price','onchain'], lthNpc:['price','onchain'],
   lthSopr:['behavior','onchain'], sthSopr:['behavior','onchain'], skew:['positioning','positioning'], oiLev:['positioning','positioning']
 };
 const BUDGET={ B:{price:45,behavior:25,positioning:8,flow:10,macro:8,clock:4},

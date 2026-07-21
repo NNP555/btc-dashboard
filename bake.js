@@ -264,9 +264,60 @@ async function fred() {
   log('FRED ✓');
 }
 
+// ---------- Checkonchain: LTH Net Position Change 30d (бесплатно, БЕЗ rate-лимита) ----------
+// Извлекаем Plotly-данные из light.html; ноль нагрузки на bitcoin-data лимит.
+function ccExtract(html) {
+  const k = html.indexOf('Plotly.newPlot');
+  let i = html.indexOf('[', k), depth = 0, inStr = false, esc = false, start = i;
+  for (; i < html.length; i++) {
+    const c = html[i];
+    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === '[') depth++;
+    else if (c === ']') { depth--; if (depth === 0) return html.slice(start, i + 1); }
+  }
+  return null;
+}
+function ccDecode(y) {
+  if (!y) return null;
+  if (Array.isArray(y)) return y;
+  if (y.bdata) {
+    const b = Buffer.from(y.bdata, 'base64');
+    const ab = b.buffer.slice(b.byteOffset, b.byteOffset + b.length);
+    if (y.dtype === 'f8') return new Float64Array(ab);
+    if (y.dtype === 'f4') return new Float32Array(ab);
+    if (y.dtype === 'i2') return new Int16Array(ab);
+    if (y.dtype === 'i4') return new Int32Array(ab);
+  }
+  return null;
+}
+async function checkonchainNpc() {
+  try {
+    const url = 'https://charts-cdn.checkonchain.com/btconchain/supply/lthnetposchange_0/lthnetposchange_0_light.html';
+    const html = await (await fetch(url)).text();
+    const data = JSON.parse(ccExtract(html));
+    function ser(nm) {
+      const t = data.find(t => t.name === nm);
+      if (!t) return [];
+      const yy = ccDecode(t.y), xx = t.x, out = [];
+      for (let k = 0; k < xx.length; k++) if (isFinite(yy[k]) && yy[k] !== 0) out.push([xx[k].slice(0, 10), yy[k]]);
+      return out;
+    }
+    const map = new Map();
+    for (const [d, v] of ser('Positive 30d Change')) map.set(d, v);
+    for (const [d, v] of ser('Negative 30d Change')) if (!map.has(d)) map.set(d, v);
+    const dates = [...map.keys()].sort();
+    if (dates.length) {
+      const ld = dates[dates.length - 1];
+      put('lthNpc', map.get(ld), ld, 'Checkonchain NPC 30d');
+      log('Checkonchain LTH-NPC OK', (map.get(ld) / 1000).toFixed(0) + 'k @', ld);
+    } else log('Checkonchain LTH-NPC пустой ряд');
+  } catch (e) { log('Checkonchain LTH-NPC error', e.message); }
+}
+
 // ---------- carry-forward (если источник не ответил в этот прогон) ----------
 function carryTodo() {
-  for (const k of ['etfFlow', 'm2', 'us10y', 'dxy', 'skew']) if (!snap.metrics[k] && prevM[k]) snap.metrics[k] = prevM[k];
+  for (const k of ['etfFlow', 'm2', 'us10y', 'dxy', 'skew', 'lthNpc']) if (!snap.metrics[k] && prevM[k]) snap.metrics[k] = prevM[k];
 }
 
 // ---------- main ----------
@@ -283,6 +334,7 @@ function carryTodo() {
   await others();
   await etfFlow();
   await fred();
+  await checkonchainNpc();
   carryTodo();
 
   // Reserve Risk (свежий) = цена / HODL Bank — если оба есть
